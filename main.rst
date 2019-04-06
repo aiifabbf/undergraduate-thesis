@@ -95,7 +95,7 @@
 研究现状
 -------
 
-对于模拟电路自动化设计的探索其实和数字电路自动化设计开始的时间差不多，从1987年，这个领域就成为了许多研究者研究的热点领域 [rocha2014]_ ，出现了例如DELIGHT.SPICE [nye1988]_ 、IDAC [degrauwe1987]_ 、BLADES [turky1989]_ 、ISAAC/OPTIMAN [gielen1989]_ 、ASTRX/OBLX [ochotta1996]_ 、ANACONDA [phelps2000]_ 等众多项目，按文献 [rocha2014] 的分类，按照实现方法来分类，这些项目大多可以分为两大类
+对于模拟电路自动化设计的探索其实和数字电路自动化设计开始的时间差不多，从1987年，这个领域就成为了许多研究者研究的热点领域 [rocha2014]_ ，出现了例如DELIGHT.SPICE [nye1988]_ 、IDAC [degrauwe1987]_ 、BLADES [turky1989]_ 、ISAAC/OPTIMAN [gielen1989]_ 、ASTRX/OBLX [ochotta1996]_ 、ANACONDA [phelps2000]_ 等众多项目，按文献 [rocha2014]_ 的分类，按照实现方法来分类，这些项目大多可以分为两大类
 
 -   基于知识库
 -   基于优化
@@ -124,7 +124,7 @@
 
 基于方程的缺点是，方程的复杂度随电路的规模指数级上升，如果电路中晶体管数量非常大，需要解一组巨大的非线性方程。这些方程的存储、操作、近似化简都是巨大的问题。因此这种方法往往只能用在小规模的电路中。
 
-基于仿真的基本思路是不分析电路，直接给仿真器输入电路拓扑和大量的元件参数样本向量来试错，再从这些不同的元件参数构成的电路的波形里提取出不同样本的性能指标，分析、衡量这些样本的性能指标之后，基于特定优化算法的一些假设，再次生成下一轮可能更接近最优解的样本，再输入仿真器，如此迭代，最终得到最优样本。这种方法的典型代表是DELIGHT.SPICE [nye1988]_ 、ANACONDA [phelps2000] 。他们主要的创新是在目标函数优化算法上。近期因为机器学习大热，还出现了使用强化学习来设计电路参数的做法 [wang2018]_ 。
+基于仿真的基本思路是不分析电路，直接给仿真器输入电路拓扑和大量的元件参数样本向量来试错，再从这些不同的元件参数构成的电路的波形里提取出不同样本的性能指标，分析、衡量这些样本的性能指标之后，基于特定优化算法的一些假设，再次生成下一轮可能更接近最优解的样本，再输入仿真器，如此迭代，最终得到最优样本。这种方法的典型代表是DELIGHT.SPICE [nye1988]_ 、ANACONDA [phelps2000]_ 。他们主要的创新是在目标函数优化算法上。近期因为机器学习大热，还出现了使用强化学习来设计电路参数的做法 [wang2018]_ 。
 
 基于仿真的缺点是，严重依赖仿真器，因此仿真器的速度是主要瓶颈。大量仿真其实并不是仿真器发明的初衷，仿真器发明的初衷是用来验证设计的 [nagel1973]_ ，再加上仿真器领域是一个非常小众的领域，在仿真器优化领域并没有很多研究者。在可见的未来，仿真器的速度提升仍然主要依靠硬件的速度提升，而不是算法层面的提升，所以仿真器的速度在近期也不会有巨大提升。
 
@@ -145,11 +145,132 @@
 -   在 自动化设计的程序实现_ 章节中，会详细讨论本文实现的自动化设计工具的整体框架、实现思路、实现细节
 -   在 实验结果_ 章节中，会详细分析本文实现的自动化设计工具的在几种运算放大器设计上的实验结果
 
+.. 绪论我怎么就已经扯了快10000字了……
+
 自动化设计原理
 ============
 
+    如果一个问题无法用数学描述，那么这个问题不值得去解决。
+
+    ——爱因斯坦
+
+.. 这个出处我不知道……而且是不是爱因斯坦讲的啊？
+
 电路参数设计的形式化描述
 --------------------
+
+在电路参数设计过程中，我们常常需要的设计的参数有
+
+-   晶体管的尺寸 :math:`W, L`
+-   补偿电阻的阻值 :math:`R_m`
+-   补偿电容的电容值 :math:`C_m`
+-   偏置电流 :math:`I_0`
+-   ...
+
+如果我们把所有需要设计的 :math:`n` 个参数排好序，会发现这一组参数形成了一个 :math:`n` 维的 **参数向量** :math:`\vec{x}` ，例如
+
+.. math::
+    :name: eq-parameter-vector
+
+    \vec{x} = \left(\begin{aligned}
+        x_1 \\
+        x_2 \\
+        x_3 \\
+        \vdots \\
+        x_n
+    \end{aligned}\right)
+    \begin{aligned}
+        &\to \text{$\rm M_1$ 的宽度 $W$} \\
+        &\to \text{$\rm M_1$ 的长度 $L$} \\
+        &\to \text{$\rm M_2$ 的宽度 $W$} \\
+        &\vdots \\
+        &\to \text{补偿电容 $C_{\rm m}$}
+    \end{aligned}
+
+这个参数向量的任何一维的数值通常都是有范围的，不能无限大或者无限小，例如在台积电.18工艺下，每个晶体管的长度 :math:`L` 都在180 nm到9000 nm之间，即 :math:`L \in [180n, 90μ]` ，同理，晶体管的长度、电阻、电容等其他参数，在受到工艺、面积、功耗的限制、或者因为设计师的一些考虑，都是有范围的。所有合法、合理的参数向量 :math:`\vec{x}` 形成了一个 **参数向量空间** :math:`\mathbb{X}` 。
+
+同时在实际设计过程中，参数除了有范围，而且不是连续的，比如晶体管的长度不能是 180.233333333 nm，因而参数向量空间也往往不是连续的 :math:`n` 维空间，而是一系列离散的格点组成的离散空间。 [#]_
+
+.. [#] 后面将会看到，这种离散空间从理论上会给我们找函数最小值带来很多麻烦，但庆幸的是能用一些方法规避这个问题。
+
+每个具体的参数向量结合具体的电路拓扑，就可以唯一确定一个具体电路。此时就应该考虑这个电路是否能满足设计者的性能指标要求，这就引出了电路评价的问题。
+
+在手动设计过程中，设计者评价电路好坏，通常是通过几个硬性约束、几个软性约束 [liu2009]_ 。所谓硬性约束就是必须满足的标准，否则电路不可用，比如相位裕度一般就是硬性约束；所谓软性约束就是没有特别清楚的可用和不可用的界限，而是越大越好、或是越小越好，比如面积一般就是软性约束。一个性能指标可以同时受到硬性约束和软性约束，比如增益必须大于10,000，但是如果能做到比10,000大会更好。
+
+以二阶运算放大器为例，通常的硬性约束可能有
+
+-   直流增益。比如要大于等于10,000
+-   带宽。比如要大于等于100 MHz
+-   相位裕度。比如要大于等于60度
+-   切换速率 [#]_ 。比如要大于等于10 V/μs
+-   静态功耗。比如要小于等于1 mW
+-   ...
+
+.. [#] 即slew rate。
+
+通常的软性约束可能有
+
+-   面积越小越好
+-   静态功耗越小越好
+-   ...
+
+如果用一组不等式把硬性约束写出来，就是
+
+.. math::
+    :name: eq-constraints
+
+    \left\{\begin{aligned}
+        c_1(\vec{x}) &= \text{gain}(\vec{x}) - 10,000 &&\ge 0 \\
+        c_2(\vec{x}) &= \text{bandwidth}(\vec{x}) - 100 \cdot 10^6 &&\ge 0 \\
+        c_3(\vec{x}) &= \text{PM}(\vec{x}) - 60 &&\ge 0 \\
+        &\vdots \\
+    \end{aligned}\right.
+
+如果用一组方程把软性约束写出来，就是
+
+.. math::
+    :name: eq-objectives
+
+    \left\{\begin{aligned}
+        f_1(\vec{x}) &= \text{area}(\vec{x}) \\
+        f_2(\vec{x}) &= \text{power}(\vec{x}) \\
+        &\vdots \\
+    \end{aligned}\right.
+
+可以看到软性约束是通过一些函数 :math:`f_1(\vec{x}), f_2(\vec{x}), ...` 来定义的，这些函数被称为 **目标函数** 。
+
+这其中，有几个性能指标是频域指标，例如增益、带宽、相位裕度；有几个性能指标是瞬态指标，例如切换速率；还有几个指标是直流指标，例如面积、静态功耗。因此在完成初步设计之后，设计师要做多次仿真
+
+-   1次AC仿真，得到增益、带宽、相位裕度
+-   1次TRAN仿真，得到切换速率
+-   1次OP仿真，得到面积、静态功耗
+
+在运算放大器领域，通常可能还会伴有零极点分析，所以还需要做1次PZ仿真，得到零极点分布图。
+
+到这里，初步的形式化描述已经非常明显了：所谓电路参数设计，就是在一组约束 :math:`c_1(\vec{x}), c_2(\vec{x}), ... \leq 0` 且 :math:`\vec{x} \in \mathbb{X}` 的前提下，找到目标函数 :math:`f_1(\vec{x}), f_2(\vec{x}), ...` 的最小值及其对应的 :math:`\vec{x}` 。
+
+用数学语言描述，就是找到一个 :math:`\vec{x}_0 \in \mathbb{X}` 使得
+
+.. math::
+
+    \begin{aligned}
+        & c_1(\vec{x}), c_2(\vec{x}), ... \geq 0 \\
+        & \forall \vec{x} \neq \vec{x}_0, \vec{x} \in \mathbb{X}: \quad f_1(\vec{x}_0) \leq f_1(\vec{x}), f_2(\vec{x}_0) \leq f_2(\vec{x}), ...
+    \end{aligned}
+
+但是我们很快就会发现上述描述的一个问题。问题出在第二个命题上，我们要寻找一个 :math:`\vec{x}_0 \in \mathbb{X}` ，它要同时是好几个目标函数 :math:`f_1(\vec{x}), f_2(\vec{x}), ...` 的最小值点，这好像是不太可能的。所以这里需要做一个限制，要求目标函数只能有一个。有两种办法
+
+-   要么只取最看重的那一个性能指标作为目标函数，比如只取面积、或是只取静态功耗作为目标函数，其他参数不管、或者只放在硬约束里
+-   要么把所有看重的性能指标用某种方式组合起来，比如简单地加起来变成一个和、或者加权之后加起来变成一个和、或者乘起来变成一个积
+
+至此终于得到了一个看上去比较合理的参数设计的形式化描述：找到一个 :math:`\vec{x}_0 \in \mathbb{X}` 使得
+
+.. math::
+
+    \begin{aligned}
+        & c_1(\vec{x}), c_2(\vec{x}), ... \geq 0 \\
+        & \forall \vec{x} \neq \vec{x}_0, \vec{x} \in \mathbb{X}: \quad f(\vec{x}_0) \leq f(\vec{x})
+    \end{aligned}
 
 目标函数的优化方法
 ---------------
@@ -192,16 +313,17 @@
 
 .. [rocha2014] Frederico A.E. Rocha et al., "Electronic Design Automation of Analog ICs Combining Gradient Models with Multi-Objective Evolutionary Algorithms," Springer, 2014.
 .. [meurer2017] Meurer et al., "SymPy: symbolic computing in Python," PeerJ Computer Science, 2017.
-.. [nye1988] W. Nye, D.C. Riley, A. Sangiovanni-Vincentelli et al., "DELIGHT.SPICE: an optimization-based system for the design of integrated circuits," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 7(4), 501–519 (1988).
+.. [nye1988] W.\  Nye, D.C. Riley, A. Sangiovanni-Vincentelli et al., "DELIGHT.SPICE: an optimization-based system for the design of integrated circuits," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 7(4), 501–519 (1988).
 .. [degrauwe1987] M.G.R. Degrauwe, O. Nys, E. Dijkstra et al., "IDAC: an interactive design tool for analog CMOS circuits," IEEE J. Solid-State Circuits 22(6), 1106–1116 (1987)
-.. [turky1989] F. El-Turky, E.E. Perry, "BLADES: an artificial intelligence approach to analog circuit design," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 8(6), 680–692 (1989)
+.. [turky1989] F.\  El-Turky, E.E. Perry, "BLADES: an artificial intelligence approach to analog circuit design," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 8(6), 680–692 (1989)
 .. [sheu1990] B.J. Sheu, J.C. Lee, A.H. Fung, "Flexible architecture approach to knowledge-based analogue IC design," IEEE Proc. G Circuits Devices Syst. 137(4), 266–274 (1990)
 .. [gielen1989] G.G.E. Gielen, H.C.C. Walscharts, W.M.C. Sansen, "ISAAC: a symbolic simulator for analog integrated circuits," IEEE J. Solid-State Circuits 24(6), 1587–1597 (1989)
 .. [ochotta1996] E.S. Ochotta, R.A. Rutenbar, L.R. Carley, "Synthesis of high-performance analog circuits in ASTRX/OBLX," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 15(3), 273–294 (1996).
-.. [phelps2000] R. Phelps, M. Krasnicki, R.A. Rutenbar et al., "Anaconda: simulation-based synthesis of analog circuits via stochastic pattern search," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 19(6), 703–717 (2000).
+.. [phelps2000] R.\  Phelps, M. Krasnicki, R.A. Rutenbar et al., "Anaconda: simulation-based synthesis of analog circuits via stochastic pattern search," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 19(6), 703–717 (2000).
 .. [wang2018] Hanrui Wang et al., "Learning to design circuits, " arXiv, 2018.
 .. [nagel1973] Nagel, L. W, and Pederson, D. O., "SPICE (Simulation Program with Integrated Circuit Emphasis)," Memorandum No. ERL-M382, University of California, Berkeley, Apr. 1973.
 .. [koh1990] H.Y. Koh, C.H. Sequin, P.R. Gray, "OPASYN: a compiler for CMOS operational amplifiers," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 9(2), 113–125 (1990).
 .. [wolfe2004] G.A. Wolfe, "Performance Macro-Modeling Techiniques for Fast Analog Circuit Synthesis," University of Cincinnati, 2004.
-.. [barros2006] M. Barros, J. Guilherme, N. Horta, "GA-SVM optimization kernel applied to analog IC design automation," in IEEE Internation Conference on Electronics, (2006), pp.486–489
+.. [barros2006] M.\  Barros, J. Guilherme, N. Horta, "GA-SVM optimization kernel applied to analog IC design automation," in IEEE Internation Conference on Electronics, (2006), pp.486–489
 .. [yu2018] Hao Yu, Guoyong Shi, "Symbolic circuit reduction for multistage amplifier macromodeling," IEEE Asia Pacific Conference on Circuits and Systems, 2018.
+.. [liu2009] Bo Liu, et al., "Analog circuit optimization system based on hybrid evolutionary algorithms," INTEGRATION, the VLSI journal, 2009.
