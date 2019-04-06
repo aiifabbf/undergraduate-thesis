@@ -69,7 +69,7 @@
 2.  查文献、或手动推导传输函数
 
     对于结构简单的运算放大器，如无补偿二阶运算放大器、或是简单Miller补偿运算放大器，因为电路结构较为简单，尚且可以通过手动推导来得到传输函数；对于结构较复杂的，基本上无法通过手动推导，只能查阅文献，借鉴大师们 [#]_ 的计算结果；或者自己使用符号运算系统（如Sympy [meurer2017]_ ）自行推导。
-    
+
     而这也引出了下一个问题：符号运算系统只能按部就班地算出传输函数，如果电路很复杂，计算出的传输函数的规模将会极其巨大，可能能写满两页A4纸。这会直接阻碍下一步的工作。
 
     .. [#] 我绝对没有讽刺的意思在里面。真的。
@@ -333,8 +333,218 @@
 自动化设计的程序实现
 =================
 
+本文实现了一个简单的参数自动设计工具sizer [#]_ 。整个程序使用Python编写，使用了面向对象的设计方法。
+
+.. [#] 代码仓库 https://github.com/aiifabbf/sizer
+
+使用示例
+-------
+
+使用sizer的典型工作流是
+
+1.  设计师用自己顺手的电路原理图编辑器，如KiCAD、Cadence Virtuoso等，绘制出电路原理图
+2.  在需要设计的参数处留下占位符。比如如果需要设计晶体管的长度，就在原理图编辑器里指定晶体管长度为 :code:`{w1}` ，在变量两边加大括号
+3.  将原理图导出为SPICE网表。也可以在这一步手动打开SPICE网表，在需要设计的参数处留占位符
+4.  用sizer读入SPICE网表
+5.  用Python语言自定义损失函数
+6.  指定变量的边界范围
+7.  从 :code:`sizer.optimizers` 中选择一种优化算法
+8.  运行，等待结果
+
+从第4步开始，一切工作都在Python中完成。作者没有设计图形界面的原因是，Python语言本身已经足够简单，且用代码定制优化需求灵活方便，并且大而全的软件设计模式不符合KISS原则。
+
+以一个简单Miller补偿的二阶运算放大器为例，SPICE网表如下
+
+.. code::
+
+    *Sheet Name:/OPA_SR
+    V1  Vp GND dc 1.65 ac 0.5
+    V2  Vn GND dc 1.65 ac -0.5
+    C2  Vout GND 4e-12
+    C1  /3 Vout {cm}
+    M7  Vout /6 VDD VDD p_33 l={l7} w={w7}
+    M6  Vout /3 GND GND n_33 l={l6} w={w6}
+    M2  /3 vp /1 VDD p_33 l={l12} w={w12}
+    M1  /2 vn /1 VDD p_33 l={l12} w={w12}
+    M4  /3 /2 GND GND n_33 l={l34} w={w34}
+    M3  /2 /2 GND GND n_33 l={l34} w={w34}
+    M5  /1 /6 VDD VDD p_33 l={l5} w={w5}
+    V0  VDD GND 3.3
+    M8  /6 /6 VDD VDD p_33 l={l8} w={w8}
+    I1  /6 GND 10e-6
+
+    .end
+
+其中大括号括起来的变量都是指定的需要设计的参数。一共13个变量。因为M1和M2是输入差分对管、M3和M4是输入差分对的负载管，所以它们完全对称、尺寸分别相等。
+
+.. figure:: quickstart-demo-schematic.png
+
+    简单Miller补偿的二阶运算放大器电路原理图。网表中的电流镜像源管M8和镜像源管下方的电流源I1未画出。
+
+一个典型的仿真代码文件如下
+
+.. code:: python
+
+    import sizer
+    import numpy as np
+
+    with open("./demos/two-stage-amplifier/two-stage-amp.cir") as f:
+        circuitTemplate = sizer.CircuitTemplate(f.read(), rawSpice=".lib CMOS_035_Spice_Model.lib tt")
+
+    def unityGainFrequencyLoss(circuit):
+        try:
+            return np.maximum(0, (1e+7 - circuit.unityGainFrequency) / 1e+7)
+        except:
+            return 1
+
+    def gainLoss(circuit):
+        return np.maximum(0, (1e+3 - np.abs(circuit.gain)) / 1e+3)
+
+    def phaseMarginLoss(circuit):
+        try:
+            return np.maximum(0, (60 - circuit.phaseMargin) / 60)
+        except:
+            return 0
+
+    def loss(circuit):
+        losses = [phaseMarginLoss(circuit), gainLoss(circuit), unityGainFrequencyLoss(circuit)]
+        return np.sum(losses)
+
+    bounds = {
+        w: [0.5e-6, 100e-6] for w in ["w12", "w34", "w5", "w6", "w7", "w8"]
+    }
+    bounds.update({
+        l: [0.35e-6, 50e-6] for l in ["l12", "l34", "l5", "l6", "l7", "l8"]
+    })
+    bounds.update({
+        "cm": [1e-12, 10e-12]
+    })
+
+    optimizer = sizer.optimizers.ScipyMinimizeOptimizer(circuitTemplate, loss, bounds, earlyStopLoss=0)
+
+    circuit = optimizer.run()
+    print(circuit.netlist)
+
+其中
+
+-   .. code:: python
+
+        import sizer
+        import numpy as np
+
+    用于导入 :code:`sizer` 库和Python的科学计算库 :code:`numpy`。
+
+-   .. code:: python
+
+        with open("./demos/two-stage-amplifier/two-stage-amp.cir") as f:
+            circuitTemplate = sizer.CircuitTemplate(f.read(), rawSpice=".lib CMOS_035_Spice_Model.lib tt")
+
+    读入SPICE网表，生成电路模板 :code:`sizer.CircuitTemplate` 对象。
+
+-   .. code:: python
+
+        def unityGainFrequencyLoss(circuit):
+            try:
+                return np.maximum(0, (1e+7 - circuit.unityGainFrequency) / 1e+7)
+            except:
+                return 1
+
+        def gainLoss(circuit):
+            return np.maximum(0, (1e+3 - np.abs(circuit.gain)) / 1e+3)
+
+        def phaseMarginLoss(circuit):
+            try:
+                return np.maximum(0, (60 - circuit.phaseMargin) / 60)
+            except:
+                return 1
+
+    定义了3个硬约束，分别是
+
+    -   单位增益带宽不小于10 MHz
+    -   直流增益不小于1,000倍，即60 dB
+    -   相位裕度不小于60度
+
+    同时使用了ReLU损失函数形式，并且做了归一化处理。
+
+    单位增益、相位裕度的损失函数定义中含有处理异常的 :code:`try...except` 代码块的原因是，作者大量实验观察到，有时优化算法会生成一个根本不具有放大功能的异常电路，此时单位增益、相位裕度是无法定义的，所以直接令损失函数为1，这样可以告诉优化器设计师对这个电路很不满意，方便优化器做出下一步判断。
+
+-   .. code:: python
+
+        def loss(circuit):
+            losses = [phaseMarginLoss(circuit), gainLoss(circuit), unityGainFrequencyLoss(circuit)]
+            return np.sum(losses)
+
+    将三个损失函数加起来，形成了total loss。
+
+-   .. code:: python
+
+        bounds = {
+            w: [0.5e-6, 100e-6] for w in ["w12", "w34", "w5", "w6", "w7", "w8"]
+        }
+        bounds.update({
+            l: [0.35e-6, 50e-6] for l in ["l12", "l34", "l5", "l6", "l7", "l8"]
+        })
+        bounds.update({
+            "cm": [1e-12, 10e-12]
+        })
+
+    指定每个设计参数的边界范围。设定了每个晶体管的宽度在 :math:`[0.5 \mu, 100 \mu]` 之间，长度在 :math:`[0.35 \mu, 50 \mu]` 之间，补偿电容在 :math:`[1 p, 10 p]` 之间。
+
+-   .. code:: python
+
+        optimizer = sizer.optimizers.ScipyMinimizeOptimizer(circuitTemplate, loss, bounds, earlyStopLoss=0)
+
+    指定目标函数优化算法是 :code:`scipy` 实现的BGFS算法。指定电路模板、损失函数、变量边界，此外还指定了一旦遇到某个具体电路的total loss是0就立即停止优化，因为这个示例里，没有目标函数，只有三个硬性约束，只要达到就好，total loss为0即说明三个硬性约束已经全部同时满足，没有必要再继续优化下去了。
+
+-   .. code:: python
+
+        circuit = optimizer.run()
+        print(circuit.netlist)
+
+    开始运行优化。优化结束后， :code:`optimzer.run()` 才会返回表示最优电路的 :code:`sizer.Circuit` 对象，然后第二行会打印出最优电路的SPICE网表。
+    
+    这个示例只需要大概20秒就可以出结果。
+
 程序整体框架
 ----------
+
+程序包含三个模块
+
+-   顶层模块 :code:`sizer`
+
+    包含两个重要的类
+
+    -   :code:`sizer.CircuitTemplate` 代表电路模板
+
+        主要用来读取含有未定参数的电路的SPICE网表，并在优化算法调用自己时，生成具体电路 :code:`sizer.Circuit` 对象，传入用户自定义的损失函数里。
+
+    -   :code:`sizer.CircuitTemplateList` 代表多个电路模板的集合
+
+        通常，评价一个电路需要频域、直流、瞬态等多方面性能指标，为了得到这些性能指标，需要对一个核心电路加不同的外围电路，再做AC、DC、TRAN等各种仿真，最后再算出综合损失函数。
+
+        比如在设计运算放大器的时候，为了得到增益、相位裕度等频域指标，需要把放大器接成开环、加输入直流偏置，然后做AC仿真，但为了得到转换速率等瞬态指标，需要把放大器接成单位增益反馈形式，然后做TRAN仿真。显然这么多操作不可能用一个SPICE网表就能实现，需要多个网表同时替换样本参数向量，再各自做不同的仿真，从多个仿真结果中提取性能指标。
+
+-   优化器 :code:`sizer.optimizers`
+
+    包含许多优化算法，可以在运行搜索前指定用哪个算法。常用的有
+
+    -   :code:`sizer.optimizers.ScipyDifferentialEvolutionOptimizer` 是 :code:`scipy` 实现的differential evolution优化算法
+    -   :code:`sizer.optimizers.ScipyMinimizeOptimizer` 是 :code:`scipy` 实现的L-BGFS算法
+    -   :code:`sizer.optimizers.PyswarmParticleSwarmOptimizer` 是 :code:`pyswarm` 库实现的particle swarm算法
+
+-   计算器 :code:`sizer.calculators`
+
+    包含从仿真结果波形中提取性能指标的计算函数。类似Cadence的calculators工具，输入一个波形，从波形中测量出性能指标（比如从频率响应波形中测量出PM）。常用的有
+
+    -   :code:`sizer.calculators.gain()` 从频率响应波形中提取直流增益
+    -   :code:`sizer.calculators.bandwidth()` 从频率响应波形中提取3 dB带宽
+    -   :code:`sizer.calculators.phaseMargin()` 从频率响应波形中提取相位裕度
+    -   :code:`sizer.calculators.unityGainFrequency()` 从频率响应波形中提取单位增益频率（增益降到1的时候的频率）
+    -   :code:`sizer.calculators.slewRate()` 从瞬态波形中提取切换速率
+    -   :code:`sizer.calculators.risingTime()` 从瞬态波形中提取上升时间
+    -   :code:`sizer.calculators.fallingTime()` 从瞬态波形中提取下降时间
+
+    基本上覆盖了常用的功能。但实际上，由于 :code:`sizer.Circuit` 里已经预先定义好了很多帮助参数，如 :code:`sizer.Circuit.gain` ，可以直接得到增益，通常情况下没有必要手动提取出波形再用计算器分析。
 
 性能参数提取
 ----------
