@@ -239,7 +239,7 @@
 
 可以看到软性约束是通过一些函数 :math:`f_1(\vec{x}), f_2(\vec{x}), ...` 来定义的，这些函数被称为 **目标函数** 。
 
-这其中，有几个性能指标是频域指标，例如增益、带宽、相位裕度；有几个性能指标是瞬态指标，例如切换速率；还有几个指标是直流指标，例如面积、静态功耗。因此在完成初步设计之后，设计师要做多次仿真
+这其中，有几个性能指标是频域指标，例如增益、带宽、相位裕度；有几个性能指标是瞬态指标，例如切换速率；还有几个指标是直流指标，例如面积、静态功耗。因此在完成初步设计之后，设计师要做多次仿真才能验证设计是否满足要求
 
 -   1次AC仿真，得到增益、带宽、相位裕度
 -   1次TRAN仿真，得到切换速率
@@ -274,6 +274,61 @@
 
 目标函数的优化方法
 ---------------
+
+在上一小节中，我们得到了一个比较合理的关于电路参数设计的形式化描述。电路参数设计被描述成一个 **带约束、带边界的单一目标函数最小化** 问题。知道了问题是什么、怎样描述之后，其实任务已经完成了一大半，剩下的难题就只有两个了
+
+-   具体电路的性能指标提取
+
+    不管是约束还是目标函数中，都有大量的性能指标函数，比如 :math:`\text{gain}(\vec{x}), \text{bandwidth}(\vec{x})` ，这些性能指标不是凭空就能得来的，而是需要依赖仿真器帮我们仿真才能得到。因为这个问题更像是一个实现问题、更接近工程问题，不太适合在讲解原理的本章说明，因此将在下一章节 自动化设计的程序实现_ 中详细讲解。
+
+-   快速定位目标函数最小值点
+
+    高中数学就讲过函数的最小值点如何求解，但是那时的函数是有明确表达式的白盒函数，而在这里无论是约束还是目标函数，都没有明确的表达式 [#]_ ，是真正的 **黑盒函数** 。对于黑盒函数，我们能做的操作就是不断试错：每次试着给目标函数喂一个参数向量，函数吐出一个一个值，然后根据以往的观察，大致猜测下一次喂哪个参数向量能得到更小的函数值，如此迭代。
+
+    .. [#] 也许存在明确表达式或者计算图，但是被隐藏在了仿真器的实现细节里。如果能够得到计算图，会给本文的实现带来巨大的效率提升。
+
+如何高效地、用尽可能少的次数来快速定位最小值点，是计算机科学中一个重要的分支问题。这里将介绍几种广泛应用的目标函数最小化算法
+
+-   COBYLA [powell1994]_
+-   SLSQP [kraft1988]_
+
+可惜的是，能用于带约束目标函数最优值求解的算法并不多，更多的优化算法只能用于无约束、带边界的单一目标函数最优值求解，而且经过介绍我们发现上面两种算法有时并不适合电路参数设计这种维数巨大的问题。庆幸的是，有方法可以将带约束、带边界的优化问题，转化成等价的无约束、带边界的优化问题，从而使更多算法能应用在我们的场景中。
+
+消除硬性约束的思路是把硬性约束变成目标函数的一部分 [liu2009]_ [phelps2000]_ 。为此，可以借鉴机器学习中常用的 **损失函数** 的概念 [#]_ ，来衡量我们对某个参数向量代表的具体的电路的 **不满意程度** 。关于损失函数，可以得出几个直观的定性性质
+
+-   当全部硬性约束满足的时候，电路至少是可以正常工作的（但考虑到软性约束，比如面积、功耗的话，不一定是最优的），所以作为设计者，我们很满意。此时损失函数应该是0。
+-   当有某个硬性约束没满足的时候，电路没能满足设计者的期望，从设计者看来是不能正常工作的，比如反馈电路中放大器增益不足，导致反馈误差超过额定值。所以作为设计者，我们不满意，此时损失函数应该是个正数。
+-   设计者的不满意程度是可以量化的，而且对不同情况的不满意程度是不同的，例如一个放大器的增益预定目标是10,000，但是只设计出了一个1,000倍的放大器和一个100倍的放大器，显然作为设计者，我们对两个放大器都不满意，但是我们对100倍的这个放大器是更加不满意的，因为它的增益实在是太小了、离预定目标的差距太大了，所以此时这个1,000倍的放大器的损失函数和这个100倍的放大器的损失函数都是正数，但是100倍的放大器的损失函数要明显比1,000倍的损失函数大。
+
+.. [#] 即loss function。
+
+显然，因为当所有硬性约束都满足的时候，它们的损失函数就全部变成了0，此时对目标函数就没有任何影响了，完全不影响我们接下来定位最优解 :math:`\vec{x}_0` 的位置，所以这种使用损失函数的转化方法不会改变最优解，因此这是一种等价转化。
+
+接下来的问题是，如何把硬性约束 :math:`c_1(\vec{x}), c_2(\vec{x}), ...` 转化成损失函数 :math:`g(c_i(\vec{x}))` 。其实这也是个非常简单的问题，因为我们上面定义过， :math:`c_i(\vec{x}) \geq 0` 代表第 :math:`i` 个硬性约束是满足的， :math:`c_i(\vec{x}) < 0` 代表第 :math:`i` 个硬性约束是没有满足的，所以我们大可给 :math:`c_i(\vec{x})` 外面套一个ReLU函数 [#]_ ，变成 :math:`\text{ReLU}(- c_i(\vec{x}))` 。不难验证这种形式是完全符合对损失函数的定义的。
+
+.. [#] ReLU函数是神经网络里目前最常用的激活函数，表达式是 :math:`\text{ReLU}(x) = \max\{0, x\}` 。图像大致走势是，取 :math:`x \geq 0` 的部分，把 :math:`x < 0` 的部分全部砍成0。
+
+所以到这里我们成功把带约束、带边界的单一目标函数最小化问题，转化成了一个等价的无约束、带边界的单一目标函数最小化问题：找到一个 :math:`\vec{x}_0 \in \mathbb{X}` ，使得
+
+.. math::
+
+    \forall \vec{x} \neq \vec{x}_0, \vec{x} \in \mathbb{X}: \quad L(\vec{x}_0) \leq L(\vec{x})
+
+其中 :math:`L(\vec{x})` 是损失函数和 [#]_
+
+.. math::
+
+    L(\vec{x}) = f(\vec{x}) + \sum_{i = 1}^n g(c_i(\vec{x}))
+
+.. [#] 即total loss。
+
+再次验证等价性：当所有硬性约束都满足的时候，加号右侧的项变成0，此时 :math:`L(\vec{x}) = f(\vec{x})` ，因此当找到最优解 :math:`\vec{x}_0` 的时候， :math:`L(\vec{x}_0) = f(\vec{x}_0)` 。因此两种描述方法定义的最优解完全一致。
+
+接下来介绍几种广泛应用的、能解决无约束、带边界的优化问题的最小化算法
+
+-   BFGS [nocedal2006]_
+-   differential evolution
+-   particle swarm
 
 自动化设计的程序实现
 =================
@@ -327,3 +382,6 @@
 .. [barros2006] M.\  Barros, J. Guilherme, N. Horta, "GA-SVM optimization kernel applied to analog IC design automation," in IEEE Internation Conference on Electronics, (2006), pp.486–489
 .. [yu2018] Hao Yu, Guoyong Shi, "Symbolic circuit reduction for multistage amplifier macromodeling," IEEE Asia Pacific Conference on Circuits and Systems, 2018.
 .. [liu2009] Bo Liu, et al., "Analog circuit optimization system based on hybrid evolutionary algorithms," INTEGRATION, the VLSI journal, 2009.
+.. [powell1994] M.J.D. Powell, "A direct search optimization method that models the objective and constraint functions by linear interpolation," Advances in Optimization and Numerical Analysis, eds. S. Gomez and J-P Hennart, Kluwer Academic (Dordrecht), 51-67, 1994.
+.. [kraft1988] D.\  Kraft, "A software package for sequential quadratic programming," Tech. Rep. DFVLR-FB 88-28, DLR German Aerospace Center – Institute for Flight Mechanics, Koln, Germany, 1988.
+.. [nocedal2006] Nocedal, J. and S.J. Wright, "Numerical Optimization," Springer New York, 2006.
