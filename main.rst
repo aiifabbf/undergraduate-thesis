@@ -95,6 +95,47 @@
 研究现状
 -------
 
+对于模拟电路自动化设计的探索其实和数字电路自动化设计开始的时间差不多，从1987年，这个领域就成为了许多研究者研究的热点领域 [rocha2014]_ ，出现了例如DELIGHT.SPICE [nye1988]_ 、IDAC [degrauwe1987]_ 、BLADES [turky1989]_ 、ISAAC/OPTIMAN [gielen1989]_ 、ASTRX/OBLX [ochotta1996]_ 、ANACONDA [phelps2000]_ 等众多项目，按文献 [rocha2014] 的分类，按照实现方法来分类，这些项目大多可以分为两大类
+
+-   基于知识库
+-   基于优化
+
+其中，基于优化这个类别又可以进一步细分为三个小类
+
+-   基于方程
+-   基于仿真
+-   基于模型
+
+基于知识库
+'''''''''
+
+所谓基于知识库，就是事先在数据库里预设了许多标准模块，比如各种结构的运算放大器、振荡器，同时还有这些模块的常用性能参数与模块中各个元件参数的关系的解析表达式，比如直流增益与每个晶体管尺寸的关系表达式、噪声系数与晶体管参数的关系表达式等等。用基于知识库的方法来自动设计模拟电路的一般流程是，从标准模块库中选取合适的模块拓扑结构，然后再给出一系列性能指标约束条件，知识库就能基于预置的表达式计算出符合约束条件的元件参数集合。
+
+严格地说，基于知识库的方法不能称为真正的自动设计，因为它无法给一个知识库里不存在的电路拓扑做自动设计，因为它根本不理解电路拓扑，它只是根据你选择的电路，按照事先预设的表达式，按部就班地算出一些参数值给你，本质上其实是用电脑代替设计师手动解电路方程。这种方法的好处是速度非常快，因为不需要仿真器，但是缺点也非常明显，就是无法给库中不存在的结构做参数设计，同时因为性能指标和元件参数的关系式是专家指定的，这里带有相当程度的近似，所以设计出来的参数也同样严重依赖工艺。
+
+基于知识库的典型代表是IDAC [degrauwe1987]_ 、BLADES [turky1989]_ 、CAMP [sheu1990]_ 。这些项目都是在早期计算机性能还不够强劲、计算机资源严重缺乏的背景下产生的，一定程度上把设计师从重复劳动中解放出来，也算是当时巨大的创新了。
+
+基于优化
+'''''''
+
+虽然电路仿真器SPICE1早在1973就被发明出来了 [nagel1973]_ ，但是受限于计算机运行速度和存储空间的限制，一个简单的电路在当时的计算机上通常就要运行一个晚上的时间才能出结果。即使有再好的优化算法，也是基于不断比较试错的、需要大量仿真的，而仿真在当时是如此昂贵的一件事，自然不可能发展出基于大量仿真的实用方法。到了1990年左右，计算机的运行速度已经足够快到支撑仿真器快速出结果了，此时就出现了大量的基于优化的自动化实现。
+
+基于方程的基本思路是分析电路结构，得出电路的解析形式方程，再运用一些优化算法，尝试得到最优解。这种方法的典型代表是OPASYN [koh1990]_ 、ISAAC/OPTIMAN [gielen1989]_ 、ASTRX/OBLX [ochotta1996]_ 。
+
+基于方程的缺点是，方程的复杂度随电路的规模指数级上升，如果电路中晶体管数量非常大，需要解一组巨大的非线性方程。这些方程的存储、操作、近似化简都是巨大的问题。因此这种方法往往只能用在小规模的电路中。
+
+基于仿真的基本思路是不分析电路，直接给仿真器输入电路拓扑和大量的元件参数样本向量来试错，再从这些不同的元件参数构成的电路的波形里提取出不同样本的性能指标，分析、衡量这些样本的性能指标之后，基于特定优化算法的一些假设，再次生成下一轮可能更接近最优解的样本，再输入仿真器，如此迭代，最终得到最优样本。这种方法的典型代表是DELIGHT.SPICE [nye1988]_ 、ANACONDA [phelps2000] 。他们主要的创新是在目标函数优化算法上。近期因为机器学习大热，还出现了使用强化学习来设计电路参数的做法 [wang2018]_ 。
+
+基于仿真的缺点是，严重依赖仿真器，因此仿真器的速度是主要瓶颈。大量仿真其实并不是仿真器发明的初衷，仿真器发明的初衷是用来验证设计的 [nagel1973]_ ，再加上仿真器领域是一个非常小众的领域，在仿真器优化领域并没有很多研究者。在可见的未来，仿真器的速度提升仍然主要依靠硬件的速度提升，而不是算法层面的提升，所以仿真器的速度在近期也不会有巨大提升。
+
+本文的程序使用的也是基于仿真的思路。
+
+因为仿真器太慢，近些年还出现了一种基于模型的思路：先用一个神经网络 [wolfe2004]_ 、或者支持向量机（SVM） [barros2006]_ 来拟合一个电路模块，形成一个近似仿真器的模型，然后在后续仿真中，用这个近似的模型来代替真实的仿真器，以规避仿真器速度不足的问题。
+
+基于模型的思路的缺点也很明显，首先用模型拟合电路模块就需要相当大数量的样本才能保证拟合效果，这些样本仍然需要仿真器给出，所以基于模型的思路实际上是把仿真复杂电路的时间成本，转嫁到了仿真前期而不是仿真时；其次，一个模型只能代表一个电路拓扑在一种特定工艺下的性能，如果改变电路拓扑或是改变工艺，整个模型都要重新拟合，所以这种方法的复用能力不强。
+
+这三种细分类别中，基于方程的方案有相当多的国内学者在研究，例如上海交通大学的Hao Yu、Guoyong Shi等人，他们研究的重点是复杂电路系统的解析形式方程的表示、存储、操作、近似化简 [yu2018]_ 。
+
 本文结构
 -------
 
@@ -143,5 +184,18 @@
 参考文献
 =======
 
-.. [rocha2014] Frederico A. E. Rocha et al., "Electronic Design Automation of Analog ICs Combining Gradient Models with Multi-Objective Evolutionary Algorithms," Springer, 2014.
+.. [rocha2014] Frederico A.E. Rocha et al., "Electronic Design Automation of Analog ICs Combining Gradient Models with Multi-Objective Evolutionary Algorithms," Springer, 2014.
 .. [meurer2017] Meurer et al., "SymPy: symbolic computing in Python," PeerJ Computer Science, 2017.
+.. [nye1988] W. Nye, D.C. Riley, A. Sangiovanni-Vincentelli et al., "DELIGHT.SPICE: an optimization-based system for the design of integrated circuits," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 7(4), 501–519 (1988).
+.. [degrauwe1987] M.G.R. Degrauwe, O. Nys, E. Dijkstra et al., "IDAC: an interactive design tool for analog CMOS circuits," IEEE J. Solid-State Circuits 22(6), 1106–1116 (1987)
+.. [turky1989] F. El-Turky, E.E. Perry, "BLADES: an artificial intelligence approach to analog circuit design," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 8(6), 680–692 (1989)
+.. [sheu1990] B.J. Sheu, J.C. Lee, A.H. Fung, "Flexible architecture approach to knowledge-based analogue IC design," IEEE Proc. G Circuits Devices Syst. 137(4), 266–274 (1990)
+.. [gielen1989] G.G.E. Gielen, H.C.C. Walscharts, W.M.C. Sansen, "ISAAC: a symbolic simulator for analog integrated circuits," IEEE J. Solid-State Circuits 24(6), 1587–1597 (1989)
+.. [ochotta1996] E.S. Ochotta, R.A. Rutenbar, L.R. Carley, "Synthesis of high-performance analog circuits in ASTRX/OBLX," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 15(3), 273–294 (1996).
+.. [phelps2000] R. Phelps, M. Krasnicki, R.A. Rutenbar et al., "Anaconda: simulation-based synthesis of analog circuits via stochastic pattern search," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 19(6), 703–717 (2000).
+.. [wang2018] Hanrui Wang et al., "Learning to design circuits, " arXiv, 2018.
+.. [nagel1973] Nagel, L. W, and Pederson, D. O., "SPICE (Simulation Program with Integrated Circuit Emphasis)," Memorandum No. ERL-M382, University of California, Berkeley, Apr. 1973.
+.. [koh1990] H.Y. Koh, C.H. Sequin, P.R. Gray, "OPASYN: a compiler for CMOS operational amplifiers," IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 9(2), 113–125 (1990).
+.. [wolfe2004] G.A. Wolfe, "Performance Macro-Modeling Techiniques for Fast Analog Circuit Synthesis," University of Cincinnati, 2004.
+.. [barros2006] M. Barros, J. Guilherme, N. Horta, "GA-SVM optimization kernel applied to analog IC design automation," in IEEE Internation Conference on Electronics, (2006), pp.486–489
+.. [yu2018] Hao Yu, Guoyong Shi, "Symbolic circuit reduction for multistage amplifier macromodeling," IEEE Asia Pacific Conference on Circuits and Systems, 2018.
