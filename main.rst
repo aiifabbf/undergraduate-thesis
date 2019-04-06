@@ -549,6 +549,38 @@
 性能参数提取
 ----------
 
+在 :code:`sizer.calculators` 模块里，作者用 :code:`numpy` 科学计算库，实现了很多从波形中提取性能指标的计算器函数，功能和Cadence Spectre里内置的计算器差不多。经过测试，这些函数性能非常好，大多数能在40 μs内返回结果。
+
+常用的计算器函数的实现细节如下
+
+-   :code:`sizer.calculators.gain()` 从频率响应波形中提取直流增益
+
+    会先检查输入的频率响应的频率范围包不包含0 Hz，如果不包含会报错；如果包含，会返回离0 Hz最近的频率响应复数。
+
+-   :code:`sizer.calculators.bandwidth()` 从频率响应波形中提取3 dB带宽
+
+    会先使用 :code:`sizer.calculators.gain()` 得到直流增益，再算出直流增益的 :math:`1 / \sqrt{2}` ，用一阶线性曲线给频率响应点做差值，解出直流增益 :math:`1 / \sqrt{2}` 倍处的频率。
+
+-   :code:`sizer.calculators.phaseMargin()` 从频率响应波形中提取相位裕度
+
+    会先用 :code:`sizer.calculators.unityGainFrequency()` 得到单位增益频率，然后用一阶线性曲线给横跨单位增益频率的两个频率之间的频率响应区间做插值，得到单位增益频率处的相位。
+
+-   :code:`sizer.calculators.unityGainFrequency()` 从频率响应波形中提取单位增益频率（增益降到1的时候的频率）
+
+    会先检查频率响应存不存在零点，然后再用一阶线性给横跨正负轴的两个频率点之间的频率区间做插值，解出零点。
+
+-   :code:`sizer.calculators.slewRate()` 从瞬态波形中提取切换速率
+
+    一边给瞬时曲线做一阶差分，一边记录一阶差分的最大值。复杂度 :math:`O(n)` ，一次扫描就能给出结果。
+
+-   :code:`sizer.calculators.risingTime()` 从瞬态波形中提取上升时间
+
+    会先寻找低阈值所在的频率点，再从这个频率点之后找高阈值所在的频率点。复杂度 :math:`O(n)` ，一次扫描就能得出结果。
+
+-   :code:`sizer.calculators.fallingTime()` 从瞬态波形中提取下降时间
+
+    和 :code:`sizer.calculators.risingTime()` 同理。
+
 调用仿真器
 --------
 
