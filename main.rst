@@ -345,7 +345,7 @@
 1.  设计师用自己顺手的电路原理图编辑器，如KiCAD、Cadence Virtuoso等，绘制出电路原理图
 2.  在需要设计的参数处留下占位符。比如如果需要设计晶体管的长度，就在原理图编辑器里指定晶体管长度为 :code:`{w1}` ，在变量两边加大括号
 3.  将原理图导出为SPICE网表。也可以在这一步手动打开SPICE网表，在需要设计的参数处留占位符
-4.  用sizer读入SPICE网表
+4.  用 :code:`sizer.CircuitTemplate` 读入SPICE网表
 5.  用Python语言自定义损失函数
 6.  指定变量的边界范围
 7.  从 :code:`sizer.optimizers` 中选择一种优化算法
@@ -432,7 +432,7 @@
         import sizer
         import numpy as np
 
-    用于导入 :code:`sizer` 库和Python的科学计算库 :code:`numpy`。
+    用于导入sizer库和Python的科学计算库numpy。
 
 -   .. code:: python
 
@@ -549,7 +549,7 @@
 性能参数提取
 ----------
 
-在 :code:`sizer.calculators` 模块里，作者用 :code:`numpy` 科学计算库，实现了很多从波形中提取性能指标的计算器函数，功能和Cadence Spectre里内置的计算器差不多。经过测试，这些函数性能非常好，大多数能在40 μs内返回结果。
+在 :code:`sizer.calculators` 模块里，作者用numpy科学计算库，实现了很多从波形中提取性能指标的计算器函数，功能和Cadence Spectre里内置的计算器差不多。经过测试，这些函数性能非常好，大多数能在40 μs内返回结果。
 
 常用的计算器函数的实现细节如下
 
@@ -584,11 +584,36 @@
 调用仿真器
 --------
 
+sizer使用的是开源仿真器ngspice [#]_ 。ngspice支持三种调用模式
+
+-   ngspice以一个守护进程运行
+
+    程序通过socket与它通信，向其提交仿真申请，并等待ngspice仿真完成后通过socket返回结果。
+
+-   动态链接ngspice的动态链接库
+
+    这种情况下ngspice并不是以一个进程独立运行的，而是在宿主程序的内存里以代码段的形式存在。宿主程序直接把包含仿真指令的数组指针、结构体指针传给代码段里的函数。
+
+    这种模式是速度最快的，因为不涉及进程间通信，没有进程间通信开销。但是因为需要生成动态链接库，涉及编译，并且还需要手动管理内存资源分配和释放，并不是最方便的一种。
+
+-   ngspice以一个命令行用户交互程序运行，程序通过子进程和进程间管道 [#]_ 通信
+
+    具体做法是先fork出一个ngspice子进程，然后把子进程的stdin和stdout和自己用pipe连接起来，自己假装成用户给ngspice发送仿真指令，ngspice完成仿真之后，会将仿真结果输出到stdout，stdout正好通过pipe与主进程连接、再把数据输出到主进程。
+
+.. [#] ngspice的主页 http://ngspice.sourceforge.net
+.. [#] 即pipe。
+
+作者并没有直接关心与ngspice的交互，这一切都用PySpice库实现了。PySpice可以以第二种和第三种模式调用ngspice。
+
 优化算法的实现
 ------------
 
 实验结果
 =======
+
+.. figure:: result-running.png
+
+    sizer运行中。运行时，sizer会把当前正在仿真测试的样本电路的total loss、仿真速度打印在屏幕上，图中可知当前正在评价的样本电路的total loss是0.00911，已经非常接近0了；每个样本电路平均花费34.5 ms。这其中的时间开销主要是主进程与ngspice子进程的通信开销。
 
 设计二阶简单Miller补偿的运算放大器
 -----------------------------
