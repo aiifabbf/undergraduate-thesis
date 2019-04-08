@@ -523,11 +523,32 @@ __ `valid-digit-solution`_
 
 -   顶层模块 :code:`sizer`
 
-    包含两个重要的类
+    包含三个重要的类
 
     -   :code:`sizer.CircuitTemplate` 代表电路模板
 
         主要用来读取含有未定参数的电路的SPICE网表，并在优化算法调用自己时，生成具体电路 :code:`sizer.Circuit` 对象，传入用户自定义的损失函数里。
+
+    -   :code:`sizer.Circuit` 代表具体电路
+
+        表示一个不含有任何未确定参数的具体的、完全确定的电路，由 :code:`sizer.CircuitTemplate` 加上所有变量的定值之后实例化产生。提供了许多方便直接提取性能指标的帮助 ``getter`` 方法，例如
+
+        -   :code:`sizer.Circuit.gain` 可直接得到这个具体电路的直流增益
+        -   :code:`sizer.Circuit.bandwidth` 可直接得到带宽
+        -   :code:`sizer.Circuit.phaseMargin` 可直接得到相位裕度
+        -   :code:`sizer.Circuit.unityGainFrequency` 可直接得到单位增益带宽
+
+        这些 ``getter`` 方法内部的实现仍然是先做仿真、调用 :code:`sizer.calculators` 里面的计算器函数、从仿真波形中提取性能参数。但是将这些方法与 :code:`sizer.Circuit` 对象绑定在一起，可以给用户定义损失函数提供很大的便利，例如用户在定义增益损失函数的时候，可以直接写
+
+        .. code:: python
+
+            def gainLoss(circuit):
+                gain = circuit.gain # 可以一行就得到增益！
+                return np.max(0, 1000 - gain) # 此处使用了ReLU，你也可以用别的
+
+        而无需在损失函数手写冗长的AC仿真语句、再调用计算器函数提取性能参数。此外这些方法还会自动从SPICE网表中找到输入节点、输出节点。 [#]_
+
+        .. [#] 支持 ``vin+, vin-, vi+, vi-, vp, vn, vin, vi`` 命名的、及其大小写无关的输入节点；支持 ``vout, vo`` 命名的、及其大小写无关的输出节点。
 
     -   :code:`sizer.CircuitTemplateList` 代表多个电路模板的集合
 
