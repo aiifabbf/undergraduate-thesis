@@ -719,13 +719,13 @@ __ `figure-smc`_
 
     .end
 
-.. figure:: smc-results.svg
+.. figure:: smc-results.png
 
     sizer设计出的4个二阶简单Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。
     
     4个电路都是使用particle swarm算法得到的，因为particle swarm算法的随机性，4个电路不完全相同。
 
-.. figure:: smc-results-losses.svg
+.. figure:: smc-results-losses.png
 
     上面的4个运算放大器的分别对应的损失函数随仿真次数的关系曲线 [#]_ 。横轴是第几次仿真，每幅小图的第一张图是增益损失函数，第二张图相位裕度损失函数，第三张图是切换速率损失函数。从图中可以明显看出损失函数值随仿真次数下降、最终到0的趋势。
     
