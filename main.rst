@@ -297,7 +297,7 @@ __ `valid-digit-solution`_
 
     .. [#] 也许存在明确表达式或者计算图，但是被隐藏在了仿真器的实现细节里。如果能够得到计算图，会给本文的实现带来巨大的效率提升。
 
-如何高效地、用尽可能少的次数来快速定位最小值点，是计算机科学中一个重要的分支问题。这里将介绍几种广泛应用的目标函数最小化算法
+如何高效地、用尽可能少的次数来快速定位最小值点，是计算机科学中一个重要的分支问题。能解决带边界、带约束下目标函数最小化问题的算法主要有
 
 -   COBYLA [powell1994]_
 -   SLSQP [kraft1988]_
@@ -336,9 +336,112 @@ __ `valid-digit-solution`_
 
 接下来介绍几种广泛应用的、能解决无约束、带边界的优化问题的最小化算法
 
--   BFGS [nocedal2006]_
--   differential evolution
--   particle swarm
+BFGS
+'''''
+
+BFGS [#]_ [nocedal2006]_ 是一种求解无约束、非线性函数最小值的迭代算法，是众多拟牛顿法 [#]_ 算法中的一种。
+
+牛顿法求一维函数的零点的大致步骤是
+
+1.  选取一个起始点 :math:`x_0`
+2.  迭代地求 :math:`x_{n + 1} = x_n - {f(x_n) \over f'(x_n)}` ，直到 :math:`|x_{n + 1} - x_n|` 足够小
+
+多维函数情况下的做法也是一样的
+
+1.  选取一个起始向量 :math:`\vec{x}_0`
+2.  迭代地求 :math:`\vec{x}_{n + 1} = \vec{x}_n - [J_f(\vec{x}_n)]^{-1} f(\vec{x}_n)` ，其中 :math:`J_f(\vec{x}_n)` 是目标函数在 :math:`\vec{x}_n` 处的雅可比矩阵，直到 :math:`| \vec{x}_{n + 1} - \vec{x}_n |` 足够小
+
+寻找目标函数的最小值点实际上就是找到目标函数一阶导数的零点，所以在上述步骤中把 :math:`f(x)` 替换成 :math:`f'(x)` 、 :math:`f'(x)` 替换成 :math:`f''(x)` 就可以了。对于多维情况，迭代式可以写成
+
+.. math::
+
+    \vec{x}_{n + 1} = \vec{x}_n - [H_f(\vec{x}_n)]^{-1} \nabla f(\vec{x}_n)
+
+其中 :math:`H_f(\vec{x}_n)` 是目标函数 :math:`f(\vec{x})` 在 :math:`\vec{x}_n` 处的海森矩阵。海森矩阵的第 :math:`i` 行、第 :math:`j` 列的值是 :math:`{\partial^2 f \over \partial x_i \partial x_j}` 。
+
+所谓拟牛顿法就是在求零点的迭代式中不使用雅可比矩阵的逆矩阵，也即在求极值的迭代式中不使用海森矩阵的逆矩阵，而使用雅可比矩阵的逆矩阵、海森矩阵的逆矩阵的某种近似，记为 :math:`B_n^{-1}` ，因为在一些实际问题中，函数的在某点的雅可比矩阵、海森矩阵可能求解非常困难、非常耗时（比如输入向量的维数非常大）、或是根本无法求解（函数在这一点上不光滑）。拟牛顿法的迭代式是
+
+.. math::
+
+    \vec{x}_{n + 1} = \vec{x}_n - B_n^{-1} \nabla f(\vec{x}_n)
+
+BFGS使用的近似方法是迭代法，迭代式是
+
+.. math::
+
+    \begin{aligned}
+        B_{n + 1} &= B_n + {y_n y_n^T \over y_n^T \Delta x_n} - {B_n \Delta x_n (B_n \Delta x_n)^T \over \Delta x_n^T B_n \Delta x_n} \\
+        B_0 &= I
+    \end{aligned}
+
+其中 :math:`\Delta x_n = - \alpha_n B_n^{-1} \nabla f(x_n)` ， :math:`\alpha_n` 是Wolfe系数。
+
+.. [#] BFGS的全称是Broyden–Fletcher–Goldfarb–Shanno算法。
+.. [#] 即quasi-Newton methods。
+
+差分进化
+'''''''
+
+差分进化 [#]_ [storn1997]_ 是一种进化算法。所谓进化算法，大多数是一种受到了自然界生物繁衍过程的启发、在算法中模拟出繁殖、突变、自然选择等生物进化现象的算法。进化算法相对于梯度下降类算法、拟牛顿法算法（如上面提到的BFGS）的一个巨大优势是，进化算法对函数的连续性、可导性没有任何要求，因为进化算法在迭代过程中不会计算梯度，所以进化算法可以找到有噪声、不光滑的函数的最小值。进化算法的劣势在于，演化过程是带有随机性的，因此不具有可复现性，而且因为不利用梯度信息，迭代的次数通常比梯度下降类算法要多很多。
+
+进化算法的一般步骤是
+
+1.  随机从参数向量空间中选取一定数量的向量 :math:`\vec{x}_1, \vec{x}_2, ...`，作为第一代样本
+2.  选取适应值最高的几个样本
+3.  最适应的几个样本之间通过杂交、变异等方式产生下一代
+4.  从下一代中选取适应值最高的几个样本，代替掉上一代中适应值最低的样本
+5.  回到第2步，直到达到最大迭代次数、或者预定的适应值
+
+差分进化算法的一般步骤是
+
+1.  随机从参数向量空间中选取一定数量的向量 :math:`\vec{x}_1, \vec{x}_2, ...`，作为第一代样本
+2.  对样本池中的每个样本 :math:`\vec{x}_k`
+
+    1.  从样本池中随机选取三个互不相同、且与 :math:`\vec{x}_k` 也不同的样本 :math:`\vec{a}, \vec{b}, \vec{c}`
+    2.  样本 :math:`\vec{x}_k` 与这三个样本按概率杂交、变异产生一个后代 :math:`\vec{y}_k`
+
+        假设样本是n维的，具体的杂交、变异方式是对每一维都随机取一个服从均匀分布的数 :math:`r_i` ，即 :math:`r_i \sim U(0, 1)` ，然后令后代 :math:`\vec{y}_k` 的第 :math:`i` 维变成
+
+        .. math::
+
+            y_{k, i} = \left\{\begin{aligned}
+                & a_i + F \times (b_i - c_i),   &&\qquad r_i < C \\
+                & x_{k, i},                     &&\qquad r_i \geq C
+            \end{aligned}\right.
+
+        其中 :math:`C \in [0, 1]` 是一个在迭代开始前就选取好的超参数 [#]_ 杂交概率， :math:`F \in [0, 2]` 也是一个超参数，称为差分权重。这两个超参数对优化过程的性能有非常大的影响。
+
+    3.  如果 :math:`f(\vec{y}_k) < f(\vec{x}_k)` ，那么就把样本池里的 :math:`\vec{x}_k` 替换成后代 :math:`\vec{y}_k`
+
+3.  回到步骤2，直到达到最大迭代次数限制、或者预定的适应值
+
+.. [#] 即differential evolution。
+.. [#] 即hyper-parameter。
+
+粒子群
+'''''
+
+和差分进化一样，粒子群算法 [#]_ [kennedy1995]_ 也是一种进化算法，但是粒子群算法的直接启发是鸟群、鱼群的觅食。鸟群、鱼群在觅食的的时候，自己的行动方向不仅取决于自己的感觉，还与整个群体的头领的移动方向有关，粒子群模仿了这一点，给每个样本在每个时刻根据一些规则计算出下一个时刻的移动方向，逐步地、迭代地使整个群体接近全局最小值。
+
+粒子群算法的具体步骤是
+
+1.  初始化 :math:`S` 个个体，随机指定位置 :math:`\vec{x}_i` ，并且用 :math:`\vec{p}_i` 记录个体经过的最佳位置
+2.  初始化全局的最佳位置 :math:`\vec{g} = \operatorname{argmin}_{\vec{p}_i} \{f(\vec{p}_i)\}` 
+3.  初始化每个个体的速度 :math:`\vec{v}_i`
+4.  对于每个个体，更新位置和速度
+
+    更新位置和速度的具体步骤是
+
+    1.  将每个个体的速度向量 :math:`\vec{v}_i` 更新为 :math:`\omega \vec{v}_i + \phi_p r_p (\vec{p}_i - \vec{x}_i) + \phi_g r_g (\vec{g} - \vec{x}_i)`
+    
+        其中 :math:`\vec{r}_p, \vec{r}_q` 是n维向量，每一维的值都服从均分布 :math:`U(0, 1)` ； :math:`\omega, \phi_p, \phi_g` 是三个超参数，分别表示速度对位置的影响大小、个体的独立程度、依赖社会的程度。如果 :math:`\phi_g` 很大，那么个体会更倾向于相信群体，在位置更新的时候会倾向于往全局最佳值的位置走。反之如果 :math:`\phi_p` 很大，那么个体会更独立、更自信一些，在位置更新的时候会更倾向于自己的判断，倾向于往自己经过的最佳位置的方向走。
+
+    2.  将每个个体的位置向量 :math:`\vec{x}_i` 更新为 :math:`\vec{x}_i + \vec{v}_i`
+    3.  评估这次位置更新，如果发现新位置的函数值小于自己已知的最佳位置处的函数值，即 :math:`f(\vec{x}_i) < f(\vec{p}_i)` ，就把 :math:`\vec{p}_i` 更新为现在的新位置，同时与全局最佳位置处的函数值做比较，如果发现 :math:`f(\vec{p}_i) < f(\vec{g})` ，那么把全局最佳位置更新为自己的新位置
+
+5.  回到步骤4，直到达到最大迭代次数限制、或者达到了预定的函数目标值
+
+.. [#] 即particle swarm。
 
 自动化设计的程序实现
 =================
@@ -505,7 +608,7 @@ __ `valid-digit-solution`_
 
         optimizer = sizer.optimizers.ScipyMinimizeOptimizer(circuitTemplate, loss, bounds, earlyStopLoss=0)
 
-    指定目标函数优化算法是 :code:`scipy` 实现的BGFS算法。指定电路模板、损失函数、变量边界，此外还指定了一旦遇到某个具体电路的total loss是0就立即停止优化，因为这个示例里，没有目标函数，只有三个硬性约束，只要达到就好，total loss为0即说明三个硬性约束已经全部同时满足，没有必要再继续优化下去了。
+    指定目标函数优化算法是 :code:`scipy` 实现的BFGS算法。指定电路模板、损失函数、变量边界，此外还指定了一旦遇到某个具体电路的total loss是0就立即停止优化，因为这个示例里，没有目标函数，只有三个硬性约束，只要达到就好，total loss为0即说明三个硬性约束已经全部同时满足，没有必要再继续优化下去了。
 
 -   .. code:: python
 
@@ -548,7 +651,7 @@ __ `valid-digit-solution`_
 
         而无需在损失函数手写冗长的AC仿真语句、再调用计算器函数提取性能参数。此外这些方法还会自动从SPICE网表中找到输入节点、输出节点。 [#]_
 
-        .. [#] 支持 ``vin+, vin-, vi+, vi-, vp, vn, vin, vi`` 命名的、及其大小写无关的输入节点；支持 ``vout, vo`` 命名的、及其大小写无关的输出节点。
+        .. [#] 支持 ``vin+, vin-, vi+, vi-, vp, vn, vin, vi`` 命名的、及其大小写无关的输入节点，也支持差分输入；支持 ``vout, vo`` 命名的、及其大小写无关的输出节点。
 
     -   :code:`sizer.CircuitTemplateList` 代表多个电路模板的集合
 
@@ -561,8 +664,8 @@ __ `valid-digit-solution`_
     包含许多优化算法，可以在运行搜索前指定用哪个算法。常用的有
 
     -   :code:`sizer.optimizers.ScipyDifferentialEvolutionOptimizer` 是 :code:`scipy` 实现的differential evolution优化算法
-    -   :code:`sizer.optimizers.ScipyMinimizeOptimizer` 是 :code:`scipy` 实现的L-BGFS算法
-    -   :code:`sizer.optimizers.PyswarmParticleSwarmOptimizer` 是 :code:`pyswarm` 库实现的particle swarm算法
+    -   :code:`sizer.optimizers.ScipyMinimizeOptimizer` 是 :code:`scipy` 实现的L-BFGS算法
+    -   :code:`sizer.optimizers.PyswarmParticleSwarmOptimizer` 是pyswarm库实现的particle swarm算法
 
 -   计算器 :code:`sizer.calculators`
 
@@ -639,6 +742,22 @@ sizer使用的是开源仿真器ngspice [#]_ 。ngspice支持三种调用模式
 
 优化算法的实现
 ------------
+
+sizer的优化器在模块 :code:`sizer.optimizers` 中，目前有
+
+-   :code:`sizer.optimizers.ScipyMinimizeOptimizer` 使用的是scipy实现的L-BFGS算法
+-   :code:`sizer.optimizers.ScipyDifferentialEvolutionOptimizer` 使用的是scipy实现的差分进化算法
+-   :code:`sizer.optimizers.ScipyDualAnnealingOptimizer` 使用的是scipy实现的双退火算法
+-   :code:`sizer.optimizers.ScipyBasinHoppingOptimizer` 使用的是scipy实现的盆地跳跃 [#]_ 算法
+-   :code:`sizer.optimizers.PyswarmParticleSwarmOptimizer` 使用的是pyswarm库实现的粒子群算法
+
+大量使用scipy、pyswarm等外部库来实现优化算法、而不是自己手动用Python实现的原因是
+
+-   这些库经过了大量科学计算的实践，同时是社区开源作品，因此较为成熟可靠。
+-   scipy的底层实现是C语言，而且针对Intel CPU做了相当多的优化，比如链接了Intel MKL科学计算库，可以充分利用Intel CPU的SIMD [#]_ 特性，利用多核并行计算来加速。
+
+.. [#] 即basin hopping算法。
+.. [#] 即single instruction multiple data，单指令、多数据。
 
 实验结果
 =======
@@ -742,17 +861,13 @@ __ `figure-smc`_
 
 .. figure:: smc-results.png
 
-    sizer设计出的4个二阶简单Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。
-    
-    4个电路都是使用particle swarm算法得到的，因为particle swarm算法的随机性，4个电路不完全相同。
+    sizer设计出的4个二阶简单Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。4个电路都是使用particle swarm算法得到的，因为particle swarm算法的随机性，4个电路不完全相同。
 
 .. figure:: smc-results-losses.png
 
-    上面的4个运算放大器的分别对应的损失函数随仿真次数的关系曲线 [#]_ 。横轴是第几次仿真，每幅小图的第一张图是增益损失函数，第二张图相位裕度损失函数，第三张图是切换速率损失函数。从图中可以明显看出损失函数值随仿真次数下降、最终到0的趋势。
-    
-    同样因为particle swarm算法的随机性，每个电路的仿真次数都不同，最高的有8000多次（如左上角图），最低的800次（如右上角图）就得出了满足所有设计目标的电路。它们仿真花费的时间差距也很大。
+    上面的4个运算放大器的分别对应的损失函数随仿真次数的关系曲线 [#]_ 。横轴是第几次仿真，每幅小图的第一张图是增益损失函数，第二张图相位裕度损失函数，第三张图是切换速率损失函数。从图中可以明显看出损失函数值随仿真次数下降、最终到0的趋势。同样因为particle swarm算法的随机性，每个电路的仿真次数都不同，最高的有8000多次（如左上角图），最低的800次（如右上角图）就得出了满足所有设计目标的电路。它们仿真花费的时间差距也很大。
 
-    .. [#] 机器学习中叫做学习曲线。
+.. [#] 机器学习中叫做学习曲线。
 
 一次典型的设计成功的电路的SPICE网表
 
@@ -820,8 +935,23 @@ __ `figure-smc`_
         -   324 s
         -   1019 s
 
-设计二阶电流缓冲器补偿的运算放大器
------------------------------
+设计二阶分裂输出Miller补偿的运算放大器
+---------------------------------
+
+.. figure:: somc.png
+
+    分裂输出Miller补偿的二阶运算放大器 [#]_ 的电路原理图
+
+.. [#] 即split-output Miller-compensated two-stage amplifier [tan2013-somc]_ 。
+
+设计二阶电流镜Miller补偿的运算放大器
+-------------------------------
+
+.. figure:: cmmc.png
+
+    电流镜Miller补偿的二阶运算放大器 [#]_ 的电路原理图
+
+.. [#] 即current-mirror Miller-compensated two-stage amplifier [tan2013-cmmc]_ 。
 
 设计三阶运算放大器
 ---------------
@@ -854,3 +984,7 @@ __ `figure-smc`_
 .. [powell1994] M.J.D. Powell, "A direct search optimization method that models the objective and constraint functions by linear interpolation," Advances in Optimization and Numerical Analysis, eds. S. Gomez and J-P Hennart, Kluwer Academic (Dordrecht), 51-67, 1994.
 .. [kraft1988] D.\  Kraft, "A software package for sequential quadratic programming," Tech. Rep. DFVLR-FB 88-28, DLR German Aerospace Center – Institute for Flight Mechanics, Koln, Germany, 1988.
 .. [nocedal2006] Nocedal, J. and S.J. Wright, "Numerical Optimization," Springer New York, 2006.
+.. [tan2013-somc] Min Tan and Wing-Hung Ki, "Split-output miller-compensated two-stage amplifiers," 2013 IEEE International Conference of Electron Devices and Solid-state Circuits, Hong Kong, 2013, pp. 1-2.
+.. [tan2013-cmmc] M.\  Tan and W. Ki, "Current-mirror miller compensation: An improved frequency compensation technique for two-stage amplifiers," 2013 International Symposium on VLSI Design, Automation, and Test (VLSI-DAT), Hsinchu, 2013, pp. 1-4.
+.. [storn1997] R.\  Storn, K. Price, "Differential evolution - a simple and efficient heuristic for global optimization over continuous spaces," Journal of Global Optimization. 11 (4): 341–359, 1997.
+.. [kennedy1995] J.\  Kennedy, R. Eberhart, "Particle Swarm Optimization," Proceedings of IEEE International Conference on Neural Networks. IV. pp. 1942–1948, 1995.
