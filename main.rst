@@ -9,6 +9,17 @@
 摘要
 =====
 
+本文回顾了集成电路发展的历史，分析了模拟集成电路设计中普遍存在的自动化程度较低的问题，研究了运算放大器的设计过程，总结出了运算放大器设计的一种数学的、形式化的描述方法，并基于Python语言、ngspice电路仿真模拟器，实现了一个能够自动搜索电路元件参数的软件工具sizer。这个程序能够读取SPICE网表，根据用户定义的性能指标、元件参数范围等要求，利用优化算法，自动搜索得出满足要求的一组元件参数。本文将这个程序应用在几个具体的案例上，测试了程序的效果和性能。实验结果显示本文的程序能够成功解决二阶、三阶运算放大器的元件参数设计问题，并在合理的时间范围内给出一组满足所有设计指标要求的解，验证了运算放大器自动化设计的可行性和实用性。
+
+关键字：EDA、自动设计、运算放大器、数学优化
+
+Abstract
+========
+
+This paper reviews the history of integrated circuits, and points out the long-lasting problem that analog circuit design lacks sufficient automation. This paper then looks into the design problem of an analog operational amplifier, concludes a mathematical formal description of the design problem, and later implements a software toolkit named sizer that can automatically search for the optimal parameter set, using the Python programming language and ngspice simulator. Given a circuit topology written in SPICE netlist, user-defined design objectives and parameter bounds, the toolkit is capable of returning a set of circuit parameters that meets all design requirements. This paper applies the toolkit onto several practical use cases to test its performance. Experiments show that the toolkit can deal with real-life two-stage and three-stage amplifiers' design problems and return within a reasonable range of time duration, proving that amplifier's automated design is practically feasible.
+
+Keywords: EDA, automated design, operational amplifier, mathematical optimization
+
 绪论
 =====
 
