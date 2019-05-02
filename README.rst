@@ -21,3 +21,24 @@
 -   全文_
 
 .. _全文: main.rst
+
+生成预览
+=======
+
+首先你要有Python，和一个叫做docutils的包。Python安装方法不谈了。docutils的话如果你装过sphinx会作为依赖装好，如果没有装的话，可以用pip装，
+
+.. code:: bash
+
+    pip install docutils
+
+装好之后，
+
+.. code:: bash
+
+    sh build-preview.sh
+
+会在当前目录生成 ``preview.html`` 。打开之后，可以直接看，也可以用浏览器打印出来看哟！
+
+安装 `Latin Modern字体`_ 后风味更佳。
+
+.. _`Latin Modern字体`: http://www.gust.org.pl/projects/e-foundry/latin-modern

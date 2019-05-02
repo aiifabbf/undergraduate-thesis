@@ -1,0 +1,1 @@
+rst2html5.py --template=preview-template.html --quiet --language=zh-cn --math-output=MathJax main.rst > preview.html
