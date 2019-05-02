@@ -955,6 +955,121 @@ __ `figure-smc`_
 
 .. [#] 即split-output Miller-compensated two-stage amplifier [tan2013-somc]_ 。
 
+设计性能指标目标是
+
+-   直流增益不小于1,000倍
+-   单位增益带宽不小于10 MHz
+-   相位裕度不小于60度
+-   切换速率不小于3 V/μs
+-   过冲不超过10%
+
+拟设计的电路参数一共13个，分别是
+
+-   第一级差分放大器的输入管M1、M2的长、宽
+-   第一级差分放大器的负载管M3、M4的长、宽
+-   第一级差分放大器的电流偏置管M0的长、宽
+-   中间级补偿用共源放大器的放大管M6的长、宽
+-   中间级补偿用共源放大器的负载管M5的长、宽
+-   第一级和中间级之间的补偿电容 :math:`C_m`
+-   第二级共源放大器的放大管M8的长、宽
+-   第二级共源放大器的负载管M7的长、宽
+-   电流镜源管M9的长、宽
+
+其他环境和配置参数与简单Miller补偿的运算放大器相同。
+
+用来提取频域性能参数的SPICE网表
+
+.. code::
+
+    *Sheet Name:/OPA_SR
+    V1  Vp GND dc 1.65 ac 0.5
+    V2  Vn GND dc 1.65 ac -0.5
+    C2  Vout GND 10e-12
+    C1  /3 /7 {cm:.4}
+    M7  Vout /6 VDD VDD p_33 l={l7:.4} w={w7:.4}
+    M8  Vout /3 GND GND n_33 l={l8:.4} w={w8:.4}
+    M5  /7 /6 VDD VDD p_33 l={l5:.4} w={w5:.4}
+    M6  /7 /3 GND GND n_33 l={l6:.4} w={w6:.4}
+    M2  /3 vp /1 VDD p_33 l={l12:.4} w={w12:.4}
+    M1  /2 vn /1 VDD p_33 l={l12:.4} w={w12:.4}
+    M4  /3 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+    M3  /2 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+    M0  /1 /6 VDD VDD p_33 l={l0:.4} w={w0:.4}
+    V0  VDD GND 3.3
+    M9  /6 /6 VDD VDD p_33 l={l9:.4} w={w9:.4}
+    I1  /6 GND 10e-6
+
+    .lib CMOS_035_Spice_Model.lib tt
+
+    .end
+
+用来提取瞬态响应性能参数的SPICE网表
+
+.. code::
+
+    *Sheet Name:/OPA_SR
+    V1  Vin GND dc pwl(0 1.65 0.5e-6 1.65 0.5e-6 1.75)
+    C2  Vout GND 10e-12
+    C1  /3 /7 {cm:.4}
+    M7  Vout /6 VDD VDD p_33 l={l7:.4} w={w7:.4}
+    M8  Vout /3 GND GND n_33 l={l8:.4} w={w8:.4}
+    M5  /7 /6 VDD VDD p_33 l={l5:.4} w={w5:.4}
+    M6  /7 /3 GND GND n_33 l={l6:.4} w={w6:.4}
+    M2  /3 Vin /1 VDD p_33 l={l12:.4} w={w12:.4}
+    M1  /2 Vout /1 VDD p_33 l={l12:.4} w={w12:.4}
+    M4  /3 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+    M3  /2 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+    M0  /1 /6 VDD VDD p_33 l={l0:.4} w={w0:.4}
+    V0  VDD GND 3.3
+    M9  /6 /6 VDD VDD p_33 l={l9:.4} w={w9:.4}
+    I1  /6 GND 10e-6
+
+    .lib CMOS_035_Spice_Model.lib tt
+
+    .end
+
+.. figure:: somc-results.png
+
+    sizer设计出的4个二阶分裂输出Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。4个电路也都是使用particle swarm算法得到的。
+
+.. figure:: somc-results-losses.png
+
+    上面的4个样本的分别对应的总体损失函数（total loss）随仿真次数的关系曲线。蓝色线表示单次仿真的总体损失函数，橙色线是累积最小总体损失函数，表示从第一次仿真开始到当次仿真之间最小的损失函数值。
+
+.. list-table:: 二阶分裂输出Miller补偿运算放大器实验结果。试验次数17次，成功11次。
+    :header-rows: 1
+    :stub-columns: 1
+
+    *   -   指标
+        -   最小值
+        -   平均值
+        -   最大值
+
+    *   -   增益
+        -   1001.6353
+        -   2269.9933
+        -   11519.7637
+
+    *   -   单位增益带宽
+        -   10.0081 MHz
+        -   14.2499 MHz
+        -   23.2624 MHz
+
+    *   -   相位裕度
+        -   60.8312度
+        -   76.7032度
+        -   117.5412度
+
+    *   -   切换速率
+        -   3.0513 V/μs
+        -   4.9062 V/μs
+        -   12.1311 V/μs
+
+    *   -   花费时间
+        -   16 s
+        -   101 s
+        -   403 s
+
 设计二阶电流镜Miller补偿的运算放大器
 -------------------------------
 
