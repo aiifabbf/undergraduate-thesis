@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>preview</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML"></script>
+    <!-- <link rel="stylesheet" href="./notebook.css"> -->
+    <link rel="stylesheet" href="./custom.css">
+    <!-- MathJax configuration -->
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+            processEscapes: true,
+            processEnvironments: true
+        },
+        // Center justify equations in code and markdown cells. Elsewhere
+        // we use CSS to left justify single line equations in code cells.
+        displayAlign: 'center',
+        "HTML-CSS": {
+            styles: {'.MathJax_Display': {"margin": 0}},
+            linebreaks: { automatic: true },
+            fonts: ["TeX"]
+        }
+    });
+    </script>
+    <style>
+        /* page style, on-screen */
+    </style>
+    <style>
+        /* page style, print-specific */
+    </style>
+    <style>
+        /* code style */
+        pre.code,
+        code {
+            background-color: transparent;
+        }
+
+        pre.code .ln {
+            color: gray;
+        }
+
+        /* line numbers */
+        /* basic highlighting: for a complete scheme, see */
+        /* http://docutils.sourceforge.net/sandbox/stylesheets/ */
+        pre.code .comment,
+        code .comment {
+            color: #408080;
+        }
+
+        pre.code .keyword,
+        code .keyword {
+            color: #008000;
+            font-weight: bold;
+        }
+
+        pre.code .literal.string,
+        code .literal.string {
+            color: #BA2121;
+        }
+
+        pre.code .name.builtin,
+        code .name.builtin {
+            color: #008000;
+        }
+
+        pre.code .deleted,
+        code .deleted {
+            background-color: #DEB0A1;
+        }
+
+        pre.code .inserted,
+        code .inserted {
+            background-color: #A3D289;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="title">高性能运算放大器的自动化设计</h1>
+    
+    <div class="contents topic" id="id2">
+<p class="topic-title first">目录</p>
+<ul class="auto-toc simple">
+<li><p><a class="reference internal" href="#id3" id="id118"><span class="sectnum">1</span> 摘要</a></p></li>
+<li><p><a class="reference internal" href="#abstract" id="id119"><span class="sectnum">2</span> Abstract</a></p></li>
+<li><p><a class="reference internal" href="#id4" id="id120"><span class="sectnum">3</span> 绪论</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#id6" id="id121"><span class="sectnum">3.1</span> 研究动机</a></p></li>
+<li><p><a class="reference internal" href="#id10" id="id122"><span class="sectnum">3.2</span> 研究现状</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#id19" id="id123"><span class="sectnum">3.2.1</span> 基于知识库</a></p></li>
+<li><p><a class="reference internal" href="#id23" id="id124"><span class="sectnum">3.2.2</span> 基于优化</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#id35" id="id125"><span class="sectnum">3.3</span> 本文结构</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#id36" id="id126"><span class="sectnum">4</span> 自动化设计原理</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#id41" id="id127"><span class="sectnum">4.1</span> 电路参数设计的形式化描述</a></p></li>
+<li><p><a class="reference internal" href="#id48" id="id128"><span class="sectnum">4.2</span> 目标函数的优化方法</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#bfgs" id="id129"><span class="sectnum">4.2.1</span> BFGS</a></p></li>
+<li><p><a class="reference internal" href="#id66" id="id130"><span class="sectnum">4.2.2</span> 差分进化</a></p></li>
+<li><p><a class="reference internal" href="#id72" id="id131"><span class="sectnum">4.2.3</span> 粒子群</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#id76" id="id132"><span class="sectnum">5</span> 自动化设计的程序实现</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#id79" id="id133"><span class="sectnum">5.1</span> 使用示例</a></p></li>
+<li><p><a class="reference internal" href="#id80" id="id134"><span class="sectnum">5.2</span> 程序整体框架</a></p></li>
+<li><p><a class="reference internal" href="#id83" id="id135"><span class="sectnum">5.3</span> 性能参数提取</a></p></li>
+<li><p><a class="reference internal" href="#id84" id="id136"><span class="sectnum">5.4</span> 调用仿真器</a></p></li>
+<li><p><a class="reference internal" href="#id89" id="id137"><span class="sectnum">5.5</span> 优化算法的实现</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#id94" id="id138"><span class="sectnum">6</span> 实验结果</a></p>
+<ul class="auto-toc">
+<li><p><a class="reference internal" href="#miller" id="id139"><span class="sectnum">6.1</span> 设计二阶简单Miller补偿的运算放大器</a></p></li>
+<li><p><a class="reference internal" href="#id102" id="id140"><span class="sectnum">6.2</span> 设计二阶分裂输出Miller补偿的运算放大器</a></p></li>
+<li><p><a class="reference internal" href="#id106" id="id141"><span class="sectnum">6.3</span> 设计二阶电流镜Miller补偿的运算放大器</a></p></li>
+<li><p><a class="reference internal" href="#id112" id="id142"><span class="sectnum">6.4</span> 实验结果分析和讨论</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#id113" id="id143"><span class="sectnum">7</span> 结论</a></p></li>
+<li><p><a class="reference internal" href="#id114" id="id144"><span class="sectnum">8</span> 致谢</a></p></li>
+<li><p><a class="reference internal" href="#id117" id="id145"><span class="sectnum">9</span> 参考文献</a></p></li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h1><a class="toc-backref" href="#id118"><span class="sectnum">1</span> 摘要</a></h1>
+<p>本文回顾了集成电路发展的历史，分析了模拟集成电路设计中普遍存在的自动化程度较低的问题，研究了运算放大器的设计过程，总结出了运算放大器设计的一种数学的、形式化的描述方法，并基于Python语言、ngspice电路仿真模拟器，实现了一个能够自动搜索电路元件参数的软件工具sizer。这个程序能够读取SPICE网表，根据用户定义的性能指标、元件参数范围等要求，利用优化算法，自动搜索得出满足要求的一组元件参数。本文将这个程序应用在几个具体的案例上，测试了程序的效果和性能。实验结果显示本文的程序能够成功解决二阶运算放大器的元件参数设计问题，并在合理的时间范围内给出一组不逊于手动设计的、满足所有设计指标要求的解，验证了运算放大器自动化设计的可行性和实用性。</p>
+<p>关键字：EDA、自动设计、运算放大器、数学优化</p>
+</div>
+<div class="section" id="abstract">
+<h1><a class="toc-backref" href="#id119"><span class="sectnum">2</span> Abstract</a></h1>
+<p>This paper reviews the history of integrated circuits, and points out the long-lasting problem that analog circuit design lacks sufficient automation. This paper then looks into the design problem of an analog operational amplifier, concludes a mathematical formal description of the design problem, and later implements a software toolkit named sizer that can automatically search for the optimal parameter set, using the Python programming language and ngspice simulator. Given a circuit topology written in SPICE netlist, user-defined design objectives and parameter bounds, the toolkit is capable of returning a set of circuit parameters that meets all design requirements. This paper applies the toolkit onto several practical use cases to test its performance. Experiments show that the toolkit can deal with real-life two-stage and three-stage amplifiers' design problems and return within a reasonable range of time duration, proving that amplifier's automated design is practically feasible.</p>
+<p>Keywords: EDA, automated design, operational amplifier, mathematical optimization</p>
+</div>
+<div class="section" id="id4">
+<h1><a class="toc-backref" href="#id120"><span class="sectnum">3</span> 绪论</a></h1>
+<p>距离集成电路的发明已经过去半个多世纪了。在这半个世纪中，集成电路以及它支撑的软件、互联网产业已经给世界带来了翻天覆地的变化。回顾集成电路从最初发明、到发展成为世界级尖端制造业的这半个多世纪的历程，我们不难发现，集成电路的快速发展很大程度上得益于集成电路自动化设计工具的进步。</p>
+<p>以Intel为例，1971年英特尔的4004微处理器大概包含了1000颗晶体管，尚且能采用全手动设计、手动布局布线，而到了2000年，英特尔的Pentium微处理器已经包含了上亿个晶体管，想要像4004那样采用全手动设计几乎是不可能的。</p>
+<p>好在从4004到Pentium并不是一蹴而就的过程：从1971到2000年，这其中的三十年，计算机硬件经历了从大型机到微型机、再到个人计算机的过程。硬件的发展推动了软件行业的诞生，使集成电路工程师逐渐开始依赖软件来辅助设计，设计出功能更强大、逻辑更复杂、晶体管数量更大的复杂电路系统。这样，硬件发展推动软件发展，性能更加强劲的硬件使得功能更强大、计算量需求更大、存储空间需求更大的软件能在更短的时间里运行完毕，反过来工程师借助这些功能更强大的软件、包括电路辅助设计软件，能更加容易地设计出更复杂的电路系统。硬件推动软件，软件反哺硬件，逐渐形成一种非常积极的正反馈发展模式。</p>
+<p>除此之外，电路设计领域也积极吸收软件开发中的经验和思路，借鉴了软件开发中模块化、多层次抽象、模块复用、泛型等思想，产生了诸如Verilog HDL的硬件描述语言、硬件描述语言编译器，使得数字逻辑设计的门槛进一步降低。</p>
+<p>可惜的是，上面的正反馈发展模式几乎只适用于数字电路，自动化设计在模拟电路设计中无法发挥很大的作用，原因包括但不限于</p>
+<ul>
+<li><p>模拟电路对工艺极其敏感</p>
+<p>比如某个设计在某个工艺制程下工作良好，但是一旦工艺进步，模拟电路的寄生分布可能会有较大变化，整个电路都可能无法正常工作，此时整个设计都需要完全推倒重来。</p>
+<p>作为对比，数字电路一般情况下对寄生并不是很敏感，因此对工艺的区别也没有那么敏感。</p>
+</li>
+<li><p>模拟电路难以模块化、难以重用</p>
+<p>除了与工艺紧耦合导致无法模块化之外，模拟电路模块之间的匹配一直以来都是一个问题，因为模拟电路通常工作在某个静态工作点附近，输入输出带有直流电平，如果不同模块接受、输出的直流电平不同，会影响后级电路的静态工作点，使电路工作不正常。</p>
+<p>作为对比，数字电路在迁移工艺的时候，有时甚至根本无需更改硬件描述语言代码，就可以在新工艺下工作良好。</p>
+</li>
+<li><p>模拟电路极其依赖经验</p>
+<p>数字电路在设计过程中经常出现的问题是逻辑错误，此时检查逻辑就可以解决问题。但是模拟电路出错可能有各种各样稀奇古怪的、难以想象的原因。此外，在设计模拟电路的时候，充满了各种折中；在分析复杂模拟电路的时候，为了避免传输函数过于复杂、不可读，还要采取各种近似。这一切都严重依赖模拟工程师的经验。</p>
+</li>
+</ul>
+<p>模拟电路深受自动化程度不足之害。设计厂商为了保证产品开发周期、提高自身竞争的时间优势，常常采用的手段是回避模拟电路——尽可能用数字电路代替模拟电路，能用数字电路就用数字电路而不用模拟电路——来节省开发时间。这种趋势愈演愈烈，直到现在，现代集成电路芯片上模拟电路占用的面积通常大约只有10% <a class="citation-reference" href="#rocha2014" id="id5">[rocha2014]</a> ，其余广大的90%左右的面积都是数字电路。</p>
+<p>这样回避模拟电路虽然是厂商的无奈之举，但是模拟电路在某些应用上始终是无法被数字电路替代的，因为世界和大自然是模拟的、连续的，某些组件只能用模拟电路实现，例如ADC、DAC、传感单元。此外，针对某些特定应用，模拟电路实现比数字电路实现在成本、效率、功耗方面都有相当大的优势，比如滤波器，用数字电路可能需要使用上百元的、功耗数十瓦的高速数字信号处理器，用模拟电路可能是几分钱、几毫瓦的RLC网络。</p>
+<p>因此如果能实现模拟电路设计自动化，就可以在很大程度上降低模拟电路设计的门槛、释放模拟电路的潜力、降低业界对数字电路的过度依赖。运算放大器同时又是模拟电路中重要的核心模块，常常与其他模块一起构成复杂的模拟电路系统，而且运算放大器的性能通常决定了整个系统的性能极限。以运算放大器为突破口，研究其自动化设计的可行性，应该能为其他模块的自动化设计提供很多思路。</p>
+<p>本文就出于这样的愿景，设计了可以自动设计运算放大器电路参数的一套系统，希望能为模拟电路自动化贡献一点微薄之力。</p>
+<div class="section" id="id6">
+<h2><a class="toc-backref" href="#id121"><span class="sectnum">3.1</span> 研究动机</a></h2>
+<p>本课题在作者大二第一次学习模拟电路的时候就逐渐产生了，到作者大三学习了两个学期CMOS模拟集成电路课程的时候，对这个课题的兴趣愈发强烈。本课题的起源和动机非常简单：在课程中，经常会遇到针对一系列性能、功耗指标来设计运算放大器的需求，例如，要求设计一个满足</p>
+<ul class="simple">
+<li><p>增益大于1000</p></li>
+<li><p>相位裕度大于60度</p></li>
+<li><p>带宽大于1 MHz</p></li>
+<li><p>...</p></li>
+</ul>
+<p>的运算放大器。通常手动设计的流程是</p>
+<ol class="arabic simple">
+<li><p>查文献，初步选择电路拓扑结构</p></li>
+<li><p>查文献、或手动推导传输函数</p></li>
+<li><p>将性能、功耗指标写成与电路小信号参数相关的不等式组、方程组</p></li>
+<li><p>解不等式组、方程组，得到晶体管尺寸、其他元件参数</p></li>
+<li><p>仿真验证，回炉再造或是进入版图阶段</p></li>
+</ol>
+<p>看上去不复杂的流程，在实际操作的时候会出现诸多问题，例如</p>
+<ol class="arabic" start="2">
+<li><p>查文献、或手动推导传输函数</p>
+<p>对于结构简单的运算放大器，如无补偿二阶运算放大器、或是简单Miller补偿运算放大器，因为电路结构较为简单，尚且可以通过手动推导来得到传输函数；对于结构较复杂的，基本上无法通过手动推导，只能查阅文献，借鉴大师们 <a class="footnote-reference brackets" href="#id9" id="id7">1</a> 的计算结果；或者自己使用符号运算系统（如Sympy <a class="citation-reference" href="#meurer2017" id="id8">[meurer2017]</a> ）自行推导。</p>
+<p>而这也引出了下一个问题：符号运算系统只能按部就班地算出传输函数，如果电路很复杂，计算出的传输函数的规模将会极其巨大，可能能写满两页A4纸。这会直接阻碍下一步的工作。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id9"><span class="brackets"><a class="fn-backref" href="#id7">1</a></span></dt>
+<dd><p>我绝对没有讽刺的意思在里面。真的。</p>
+</dd>
+</dl>
+</li>
+<li><p>将性能、功耗指标写成与电路小信号参数相关的不等式组、方程组</p>
+<p>电路的动态性能参数通常是从频率响应曲线中提取的，所以放大器的动态性能指标，如直流增益、带宽、相位裕度，也是传输函数的函数。但是正如上面所说的，这也通常是一个艰巨的任务，大师们可能不会事无巨细地推导出所有符号形式的性能指标，所以常常需要自己使用符号运算系统计算出的结果。问题就在于，如何从一个能写一页A4纸的传输函数里提取出增益、带宽、相位裕度等参数呢？</p>
+<p>这时候，大师们所做的一般是运用他们数十年积累的经验，告诉你一个近似的结果，这个近似结果足够简单、又能体现贡献这个参数的最主要的方面，并且最重要的是与完全精确解差距不是很大。但如果大师们并没有计算这个参数，那么就需要你深刻理解电路、手动近似，可是如果你不是大师，这一步会难于登天。</p>
+</li>
+<li><p>解不等式组、方程组，得到晶体管尺寸、其他元件参数</p>
+<p>终于经过了几重近似，得到了足够简单的一组不等式和方程，可是这个时候难题才刚刚开始，可能你会发现，再简单的电路都有许多二次不等式、三次方程，这时候又要不得不求助符号运算系统。</p>
+</li>
+<li><p>仿真验证，回炉再造或是进入版图阶段</p>
+<p>经过千辛万苦，终于得到了一组看似可行的尺寸，你信心满满，放入仿真器，却可能发现波形不尽如人意，无法满足设计需求。于是你开始回过头去检查刚才的步骤，但是你真的没办法准确地定位出问题究竟在哪里，因为可能出问题的地方太多太多了，有可能大师近似的时候用的是十年前的老工艺，所以他的近似是合理的，但是经过十多年的材料学科的发展，某个参数已经不再是影响这个性能指标的最主要的方面的，所以他的近似不再精准了；有可能你自己在近似的时候忽略了某个主要方面、把次要方面当做主要方面保留下来了，或者本来就不存在主要方面，而是两个参数都对这个性能指标有相当的贡献。</p>
+<p>而在大师看来，他可能会发现你只是增益不够，因此会微调最后一级负载晶体管的长度，然后增益就能达到设计指标了，或者发现相位裕度不够，因此会微调补偿电容的大小。然而，因为你不是大师，所以你只能一遍一遍返回去检查方程，而且这一切微调的技巧根本没人教你。</p>
+</li>
+</ol>
+<p>经过上面的简单介绍，不难发现模拟电路设计过程不仅流程繁琐、需要反反复复多次迭代甚至全盘推翻重来，而且对于复杂一点的电路，还要依赖经验或者专家来得到一个既不过度近似、又不啰嗦的模型。两学期的CMOS模拟电路课带给作者的最大印象是模拟电路充满了作者极其反感的玄学味道。作者在痛苦中完成这些设计作业的时候，常常会希望能够有一种工具，在我给出电路拓扑结构和性能、功耗等指标要求之后，能自动帮助作者计算出能够满足所有设计指标要求的晶体管尺寸和其他元件参数。</p>
+</div>
+<div class="section" id="id10">
+<h2><a class="toc-backref" href="#id122"><span class="sectnum">3.2</span> 研究现状</a></h2>
+<p>对于模拟电路自动化设计的探索其实和数字电路自动化设计开始的时间差不多，从1987年，这个领域就成为了许多研究者研究的热点领域 <a class="citation-reference" href="#rocha2014" id="id11">[rocha2014]</a> ，出现了例如DELIGHT.SPICE <a class="citation-reference" href="#nye1988" id="id12">[nye1988]</a> 、IDAC <a class="citation-reference" href="#degrauwe1987" id="id13">[degrauwe1987]</a> 、BLADES <a class="citation-reference" href="#turky1989" id="id14">[turky1989]</a> 、ISAAC/OPTIMAN <a class="citation-reference" href="#gielen1989" id="id15">[gielen1989]</a> 、ASTRX/OBLX <a class="citation-reference" href="#ochotta1996" id="id16">[ochotta1996]</a> 、ANACONDA <a class="citation-reference" href="#phelps2000" id="id17">[phelps2000]</a> 等众多项目，按文献 <a class="citation-reference" href="#rocha2014" id="id18">[rocha2014]</a> 的分类，按照实现方法来分类，这些项目大多可以分为两大类</p>
+<ul class="simple">
+<li><p>基于知识库</p></li>
+<li><p>基于优化</p></li>
+</ul>
+<p>其中，基于优化这个类别又可以进一步细分为三个小类</p>
+<ul class="simple">
+<li><p>基于方程</p></li>
+<li><p>基于仿真</p></li>
+<li><p>基于模型</p></li>
+</ul>
+<div class="section" id="id19">
+<h3><a class="toc-backref" href="#id123"><span class="sectnum">3.2.1</span> 基于知识库</a></h3>
+<p>所谓基于知识库，就是事先在数据库里预设了许多标准模块，比如各种结构的运算放大器、振荡器，同时还有这些模块的常用性能参数与模块中各个元件参数的关系的解析表达式，比如直流增益与每个晶体管尺寸的关系表达式、噪声系数与晶体管参数的关系表达式等等。用基于知识库的方法来自动设计模拟电路的一般流程是，从标准模块库中选取合适的模块拓扑结构，然后再给出一系列性能指标约束条件，知识库就能基于预置的表达式计算出符合约束条件的元件参数集合。</p>
+<p>严格地说，基于知识库的方法不能称为真正的自动设计，因为它无法给一个知识库里不存在的电路拓扑做自动设计，因为它根本不理解电路拓扑，它只是根据你选择的电路，按照事先预设的表达式，按部就班地算出一些参数值给你，本质上其实是用电脑代替设计师手动解电路方程。这种方法的好处是速度非常快，因为不需要仿真器，但是缺点也非常明显，就是无法给库中不存在的结构做参数设计，同时因为性能指标和元件参数的关系式是专家指定的，这里带有相当程度的近似，所以设计出来的参数也同样严重依赖工艺。</p>
+<p>基于知识库的典型代表是IDAC <a class="citation-reference" href="#degrauwe1987" id="id20">[degrauwe1987]</a> 、BLADES <a class="citation-reference" href="#turky1989" id="id21">[turky1989]</a> 、CAMP <a class="citation-reference" href="#sheu1990" id="id22">[sheu1990]</a> 。这些项目都是在早期计算机性能还不够强劲、计算机资源严重缺乏的背景下产生的，一定程度上把设计师从重复劳动中解放出来，也算是当时巨大的创新了。</p>
+</div>
+<div class="section" id="id23">
+<h3><a class="toc-backref" href="#id124"><span class="sectnum">3.2.2</span> 基于优化</a></h3>
+<p>虽然电路仿真器SPICE1早在1973就被发明出来了 <a class="citation-reference" href="#nagel1973" id="id24">[nagel1973]</a> ，但是受限于计算机运行速度和存储空间的限制，一个简单的电路在当时的计算机上通常就要运行一个晚上的时间才能出结果。即使有再好的优化算法，也是基于不断比较试错的、需要大量仿真的，而仿真在当时是如此昂贵的一件事，自然不可能发展出基于大量仿真的实用方法。到了1990年左右，计算机的运行速度已经足够快到支撑仿真器快速出结果了，此时就出现了大量的基于优化的自动化实现。</p>
+<p>基于方程的基本思路是分析电路结构，得出电路的解析形式方程，再运用一些优化算法，尝试得到最优解。这种方法的典型代表是OPASYN <a class="citation-reference" href="#koh1990" id="id25">[koh1990]</a> 、ISAAC/OPTIMAN <a class="citation-reference" href="#gielen1989" id="id26">[gielen1989]</a> 、ASTRX/OBLX <a class="citation-reference" href="#ochotta1996" id="id27">[ochotta1996]</a> 。</p>
+<p>基于方程的缺点是，方程的复杂度随电路的规模指数级上升，如果电路中晶体管数量非常大，需要解一组巨大的非线性方程。这些方程的存储、操作、近似化简都是巨大的问题。因此这种方法往往只能用在小规模的电路中。</p>
+<p>基于仿真的基本思路是不分析电路，直接给仿真器输入电路拓扑和大量的元件参数样本向量来试错，再从这些不同的元件参数构成的电路的波形里提取出不同样本的性能指标，分析、衡量这些样本的性能指标之后，基于特定优化算法的一些假设，再次生成下一轮可能更接近最优解的样本，再输入仿真器，如此迭代，最终得到最优样本。这种方法的典型代表是DELIGHT.SPICE <a class="citation-reference" href="#nye1988" id="id28">[nye1988]</a> 、ANACONDA <a class="citation-reference" href="#phelps2000" id="id29">[phelps2000]</a> 。他们主要的创新是在目标函数优化算法上。近期因为机器学习大热，还出现了使用强化学习来设计电路参数的做法 <a class="citation-reference" href="#wang2018" id="id30">[wang2018]</a> 。</p>
+<p>基于仿真的缺点是，严重依赖仿真器，因此仿真器的速度是主要瓶颈。大量仿真其实并不是仿真器发明的初衷，仿真器发明的初衷是用来验证设计的 <a class="citation-reference" href="#nagel1973" id="id31">[nagel1973]</a> ，再加上仿真器领域是一个非常小众的领域，在仿真器优化领域并没有很多研究者。在可见的未来，仿真器的速度提升仍然主要依靠硬件的速度提升，而不是算法层面的提升，所以仿真器的速度在近期也不会有巨大提升。</p>
+<p>本文的程序使用的也是基于仿真的思路。</p>
+<p>因为仿真器太慢，近些年还出现了一种基于模型的思路：先用一个神经网络 <a class="citation-reference" href="#wolfe2004" id="id32">[wolfe2004]</a> 、或者支持向量机（SVM） <a class="citation-reference" href="#barros2006" id="id33">[barros2006]</a> 来拟合一个电路模块，形成一个近似仿真器的模型，然后在后续仿真中，用这个近似的模型来代替真实的仿真器，以规避仿真器速度不足的问题。</p>
+<p>基于模型的思路的缺点也很明显，首先用模型拟合电路模块就需要相当大数量的样本才能保证拟合效果，这些样本仍然需要仿真器给出，所以基于模型的思路实际上是把仿真复杂电路的时间成本，转嫁到了仿真前期而不是仿真时；其次，一个模型只能代表一个电路拓扑在一种特定工艺下的性能，如果改变电路拓扑或是改变工艺，整个模型都要重新拟合，所以这种方法的复用能力不强。</p>
+<p>这三种细分类别中，基于方程的方案有相当多的国内学者在研究，例如上海交通大学的Hao Yu、Guoyong Shi等人，他们研究的重点是复杂电路系统的解析形式方程的表示、存储、操作、近似化简 <a class="citation-reference" href="#yu2018" id="id34">[yu2018]</a> 。</p>
+</div>
+</div>
+<div class="section" id="id35">
+<h2><a class="toc-backref" href="#id125"><span class="sectnum">3.3</span> 本文结构</a></h2>
+<p>本文将遵循以下思路展开说明</p>
+<ul class="simple">
+<li><p>在 <a class="reference internal" href="#id36">自动化设计原理</a> 章节中，会详细讨论电路设计问题的形式化描述，即如何用数学方法描述电路设计这一问题、如何描述电路性能指标的好坏；还会讨论在形成描述之后，如何用算法找到电路参数的最优解</p></li>
+<li><p>在 <a class="reference internal" href="#id76">自动化设计的程序实现</a> 章节中，会详细讨论本文实现的自动化设计工具的整体框架、实现思路、实现细节</p></li>
+<li><p>在 <a class="reference internal" href="#id94">实验结果</a> 章节中，会详细分析本文实现的自动化设计工具的在几种运算放大器设计上的实验结果</p></li>
+</ul>
+<!-- 绪论我怎么就已经扯了快10000字了…… -->
+</div>
+</div>
+<div class="section" id="id36">
+<h1><a class="toc-backref" href="#id126"><span class="sectnum">4</span> 自动化设计原理</a></h1>
+<blockquote>
+<p>提出对的问题比解决问题更难。 <a class="footnote-reference brackets" href="#id38" id="id37">2</a></p>
+<p class="attribution">——康托尔</p>
+</blockquote>
+<dl class="footnote brackets">
+<dt class="label" id="id38"><span class="brackets"><a class="fn-backref" href="#id37">2</a></span></dt>
+<dd><p>&quot;To ask the right question is harder than to answer it.&quot;</p>
+</dd>
+</dl>
+<!-- 算了……换成康托尔的名言好了 -->
+<p>电路自动化设计是一个需要计算机解决的问题。计算机是一种机器，对于一切需要计算机解决的问题，都需要周全的、详细的、严谨的操作步骤。模拟电路设计过程中人为的、主观的考虑、折中很多很多 <a class="footnote-reference brackets" href="#id40" id="id39">3</a> ，但是计算机并不理解这些，需要我们告诉它做什么、怎样做。在着手解决问题之前，首先我们要明确地知道问题是什么、以什么样的角度来看问题，这也正是本章的主要目的。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id40"><span class="brackets"><a class="fn-backref" href="#id39">3</a></span></dt>
+<dd><p>正如大师Razavi所说，模拟电路更像是艺术。</p>
+</dd>
+</dl>
+<p>本章试图给电路参数自动化设计这个问题提出一种数学的形式化描述。具体来说，是将电路的参数设计问题看成是一个寻找目标函数全局最小值的问题。</p>
+<div class="section" id="id41">
+<h2><a class="toc-backref" href="#id127"><span class="sectnum">4.1</span> 电路参数设计的形式化描述</a></h2>
+<p>在电路参数设计过程中，我们常常需要的设计的参数有</p>
+<ul class="simple">
+<li><p>晶体管的尺寸 <span class="math">\(W, L\)</span></p></li>
+<li><p>补偿电阻的阻值 <span class="math">\(R_m\)</span></p></li>
+<li><p>补偿电容的电容值 <span class="math">\(C_m\)</span></p></li>
+<li><p>偏置电流 <span class="math">\(I_0\)</span></p></li>
+<li><p>...</p></li>
+</ul>
+<p>如果我们把所有需要设计的 <span class="math">\(n\)</span> 个参数排好序，会发现这一组参数形成了一个 <span class="math">\(n\)</span> 维的 <strong>参数向量</strong> <span class="math">\(\vec{x}\)</span> ，例如</p>
+<div class="math" id="eq-parameter-vector">
+\begin{equation*}
+\vec{x} = \left(\begin{aligned}
+    x_1 \\
+    x_2 \\
+    x_3 \\
+    \vdots \\
+    x_n
+\end{aligned}\right)
+\begin{aligned}
+    &amp;\to \text{$\rm M_1$ 的宽度 $W$} \\
+    &amp;\to \text{$\rm M_1$ 的长度 $L$} \\
+    &amp;\to \text{$\rm M_2$ 的宽度 $W$} \\
+    &amp;\vdots \\
+    &amp;\to \text{补偿电容 $C_{\rm m}$}
+\end{aligned}
+\end{equation*}
+</div>
+<p>这个参数向量的任何一维的数值通常都是有范围的，不能无限大或者无限小，例如在台积电.18工艺下，每个晶体管的长度 <span class="math">\(L\)</span> 都在180 nm到9000 nm之间，即 <span class="math">\(L \in [180n, 90\mu ]\)</span> ，同理，晶体管的长度、电阻、电容等其他参数，在受到工艺、面积、功耗的限制、或者因为设计师的一些考虑，都是有范围的。所有合法、合理的参数向量 <span class="math">\(\vec{x}\)</span> 形成了一个 <strong>参数向量空间</strong> <span class="math">\(\mathbb{X}\)</span> 。</p>
+<p>同时在实际设计过程中，参数除了有范围，而且不是连续的，比如晶体管的长度不能是 180.233333333 nm，因而参数向量空间也往往不是连续的 <span class="math">\(n\)</span> 维空间，而是一系列离散的格点组成的离散空间。 <a class="footnote-reference brackets" href="#id43" id="id42">4</a></p>
+<dl class="footnote brackets">
+<dt class="label" id="id43"><span class="brackets"><a class="fn-backref" href="#id42">4</a></span></dt>
+<dd><p>后面将会看到，这种离散空间从理论上会给我们找函数最小值带来很多麻烦，但庆幸的是能用一些 <a class="reference internal" href="#valid-digit-solution">方法</a> 规避这个问题。</p>
+</dd>
+</dl>
+<p>每个具体的参数向量结合具体的电路拓扑，就可以唯一确定一个具体电路。此时就应该考虑这个电路是否能满足设计者的性能指标要求，这就引出了电路评价的问题。</p>
+<p>在手动设计过程中，设计者评价电路好坏，通常是通过几个硬性约束、几个软性约束 <a class="citation-reference" href="#liu2009" id="id45">[liu2009]</a> 。所谓硬性约束就是必须满足的标准，否则电路不可用，比如相位裕度一般就是硬性约束；所谓软性约束就是没有特别清楚的可用和不可用的界限，而是越大越好、或是越小越好，比如面积一般就是软性约束。一个性能指标可以同时受到硬性约束和软性约束，比如增益必须大于10,000，但是如果能做到比10,000大会更好。</p>
+<p>以二阶运算放大器为例，通常的硬性约束可能有</p>
+<ul class="simple">
+<li><p>直流增益。比如要大于等于10,000</p></li>
+<li><p>带宽。比如要大于等于100 MHz</p></li>
+<li><p>相位裕度。比如要大于等于60度</p></li>
+<li><p>切换速率 <a class="footnote-reference brackets" href="#id47" id="id46">5</a> 。比如要大于等于10 V/μs</p></li>
+<li><p>静态功耗。比如要小于等于1 mW</p></li>
+<li><p>...</p></li>
+</ul>
+<dl class="footnote brackets">
+<dt class="label" id="id47"><span class="brackets"><a class="fn-backref" href="#id46">5</a></span></dt>
+<dd><p>即slew rate。</p>
+</dd>
+</dl>
+<p>通常的软性约束可能有</p>
+<ul class="simple">
+<li><p>面积越小越好</p></li>
+<li><p>静态功耗越小越好</p></li>
+<li><p>...</p></li>
+</ul>
+<p>如果用一组不等式把硬性约束写出来，就是</p>
+<div class="math" id="eq-constraints">
+\begin{equation*}
+\left\{\begin{aligned}
+    c_1(\vec{x}) &amp;= \text{gain}(\vec{x}) - 10,000 &amp;&amp;\ge 0 \\
+    c_2(\vec{x}) &amp;= \text{bandwidth}(\vec{x}) - 100 \cdot 10^6 &amp;&amp;\ge 0 \\
+    c_3(\vec{x}) &amp;= \text{PM}(\vec{x}) - 60 &amp;&amp;\ge 0 \\
+    &amp;\vdots \\
+\end{aligned}\right.
+\end{equation*}
+</div>
+<p>如果用一组方程把软性约束写出来，就是</p>
+<div class="math" id="eq-objectives">
+\begin{equation*}
+\left\{\begin{aligned}
+    f_1(\vec{x}) &amp;= \text{area}(\vec{x}) \\
+    f_2(\vec{x}) &amp;= \text{power}(\vec{x}) \\
+    &amp;\vdots \\
+\end{aligned}\right.
+\end{equation*}
+</div>
+<p>可以看到软性约束是通过一些函数 <span class="math">\(f_1(\vec{x}), f_2(\vec{x}), ...\)</span> 来定义的，这些函数被称为 <strong>目标函数</strong> 。</p>
+<p>这其中，有几个性能指标是频域指标，例如增益、带宽、相位裕度；有几个性能指标是瞬态指标，例如切换速率；还有几个指标是直流指标，例如面积、静态功耗。因此在完成初步设计之后，设计师要做多次仿真才能验证设计是否满足要求</p>
+<ul class="simple">
+<li><p>1次AC仿真，得到增益、带宽、相位裕度</p></li>
+<li><p>1次TRAN仿真，得到切换速率</p></li>
+<li><p>1次OP仿真，得到面积、静态功耗</p></li>
+</ul>
+<p>在运算放大器领域，通常可能还会伴有零极点分析，所以还需要做1次PZ仿真，得到零极点分布图。</p>
+<p>到这里，初步的形式化描述已经非常明显了：所谓电路参数设计，就是在一组约束 <span class="math">\(c_1(\vec{x}), c_2(\vec{x}), ... \geq 0\)</span> 且 <span class="math">\(\vec{x} \in \mathbb{X}\)</span> 的前提下，找到目标函数 <span class="math">\(f_1(\vec{x}), f_2(\vec{x}), ...\)</span> 的最小值及其对应的 <span class="math">\(\vec{x}\)</span> 。</p>
+<p>用数学语言描述，就是找到一个 <span class="math">\(\vec{x}_0 \in \mathbb{X}\)</span> 使得</p>
+<div class="math">
+\begin{equation*}
+\begin{aligned}
+    &amp; c_1(\vec{x}), c_2(\vec{x}), ... \geq 0 \\
+    &amp; \forall \vec{x} \neq \vec{x}_0, \vec{x} \in \mathbb{X}: \quad f_1(\vec{x}_0) \leq f_1(\vec{x}), f_2(\vec{x}_0) \leq f_2(\vec{x}), ...
+\end{aligned}
+\end{equation*}
+</div>
+<p>但是我们很快就会发现上述描述的一个问题。问题出在第二个命题上，我们要寻找一个 <span class="math">\(\vec{x}_0 \in \mathbb{X}\)</span> ，它要同时是好几个目标函数 <span class="math">\(f_1(\vec{x}), f_2(\vec{x}), ...\)</span> 的最小值点，这好像是不太可能的。所以这里需要做一个限制，要求目标函数只能有一个。有两种办法</p>
+<ul class="simple">
+<li><p>要么只取最看重的那一个性能指标作为目标函数，比如只取面积、或是只取静态功耗作为目标函数，其他参数不管、或者只放在硬约束里</p></li>
+<li><p>要么把所有看重的性能指标用某种方式组合起来，比如简单地加起来变成一个和、或者加权之后加起来变成一个和、或者乘起来变成一个积</p></li>
+</ul>
+<p>至此终于得到了一个看上去比较合理的参数设计的形式化描述：找到一个 <span class="math">\(\vec{x}_0 \in \mathbb{X}\)</span> 使得</p>
+<div class="math">
+\begin{equation*}
+\begin{aligned}
+    &amp; c_1(\vec{x}), c_2(\vec{x}), ... \geq 0 \\
+    &amp; \forall \vec{x} \neq \vec{x}_0, \vec{x} \in \mathbb{X}: \quad f(\vec{x}_0) \leq f(\vec{x})
+\end{aligned}
+\end{equation*}
+</div>
+</div>
+<div class="section" id="id48">
+<h2><a class="toc-backref" href="#id128"><span class="sectnum">4.2</span> 目标函数的优化方法</a></h2>
+<p>在上一小节中，我们得到了一个比较合理的关于电路参数设计的形式化描述。电路参数设计被描述成一个 <strong>带约束、带边界的单一目标函数最小化</strong> 问题。知道了问题是什么、怎样描述之后，其实任务已经完成了一大半，剩下的难题就只有两个了</p>
+<ul>
+<li><p>具体电路的性能指标提取</p>
+<p>不管是约束还是目标函数中，都有大量的性能指标函数，比如 <span class="math">\(\text{gain}(\vec{x}), \text{bandwidth}(\vec{x})\)</span> ，这些性能指标不是凭空就能得来的，而是需要依赖仿真器帮我们仿真才能得到。因为这个问题更像是一个实现问题、更接近工程问题，不太适合在讲解原理的本章说明，因此将在下一章节 <a class="reference internal" href="#id76">自动化设计的程序实现</a> 中详细讲解。</p>
+</li>
+<li><p>快速定位目标函数最小值点</p>
+<p>高中数学就讲过函数的最小值点如何求解，但是那时的函数是有明确表达式的白盒函数，而在这里无论是约束还是目标函数，都没有明确的表达式 <a class="footnote-reference brackets" href="#id50" id="id49">6</a> ，是真正的 <strong>黑盒函数</strong> 。对于黑盒函数，我们能做的操作就是不断试错：每次试着给目标函数喂一个参数向量，函数吐出一个一个值，然后根据以往的观察，大致猜测下一次喂哪个参数向量能得到更小的函数值，如此迭代。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id50"><span class="brackets"><a class="fn-backref" href="#id49">6</a></span></dt>
+<dd><p>也许存在明确表达式或者计算图，但是被隐藏在了仿真器的实现细节里。如果能够得到计算图，会给本文的实现带来巨大的效率提升。</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>如何高效地、用尽可能少的次数来快速定位最小值点，是计算机科学中一个重要的分支问题。能解决带边界、带约束下目标函数最小化问题的算法主要有</p>
+<ul class="simple">
+<li><p>COBYLA <a class="citation-reference" href="#powell1994" id="id51">[powell1994]</a></p></li>
+<li><p>SLSQP <a class="citation-reference" href="#kraft1988" id="id52">[kraft1988]</a></p></li>
+</ul>
+<p>可惜的是，能用于带约束目标函数最优值求解的算法并不多，更多的优化算法只能用于无约束、带边界的单一目标函数最优值求解，而且经过介绍我们发现上面两种算法有时并不适合电路参数设计这种维数巨大的问题。庆幸的是，有方法可以将带约束、带边界的优化问题，转化成等价的无约束、带边界的优化问题，从而使更多算法能应用在我们的场景中。</p>
+<p>消除硬性约束的思路是把硬性约束变成目标函数的一部分 <a class="citation-reference" href="#liu2009" id="id53">[liu2009]</a> <a class="citation-reference" href="#phelps2000" id="id54">[phelps2000]</a> 。为此，可以借鉴机器学习中常用的 <strong>损失函数</strong> 的概念 <a class="footnote-reference brackets" href="#id56" id="id55">7</a> ，来衡量我们对某个参数向量代表的具体的电路的 <strong>不满意程度</strong> 。关于损失函数，可以得出几个直观的定性性质</p>
+<ul class="simple">
+<li><p>当全部硬性约束满足的时候，电路至少是可以正常工作的（但考虑到软性约束，比如面积、功耗的话，不一定是最优的），所以作为设计者，我们很满意。此时损失函数应该是0。</p></li>
+<li><p>当有某个硬性约束没满足的时候，电路没能满足设计者的期望，从设计者看来是不能正常工作的，比如反馈电路中放大器增益不足，导致反馈误差超过额定值。所以作为设计者，我们不满意，此时损失函数应该是个正数。</p></li>
+<li><p>设计者的不满意程度是可以量化的，而且对不同情况的不满意程度是不同的，例如一个放大器的增益预定目标是10,000，但是只设计出了一个1,000倍的放大器和一个100倍的放大器，显然作为设计者，我们对两个放大器都不满意，但是我们对100倍的这个放大器是更加不满意的，因为它的增益实在是太小了、离预定目标的差距太大了，所以此时这个1,000倍的放大器的损失函数和这个100倍的放大器的损失函数都是正数，但是100倍的放大器的损失函数要明显比1,000倍的损失函数大。</p></li>
+</ul>
+<dl class="footnote brackets">
+<dt class="label" id="id56"><span class="brackets"><a class="fn-backref" href="#id55">7</a></span></dt>
+<dd><p>即loss function。</p>
+</dd>
+</dl>
+<p>显然，因为当所有硬性约束都满足的时候，它们的损失函数就全部变成了0，此时对目标函数就没有任何影响了，完全不影响我们接下来定位最优解 <span class="math">\(\vec{x}_0\)</span> 的位置，所以这种使用损失函数的转化方法不会改变最优解，因此这是一种等价转化。</p>
+<p>接下来的问题是，如何把硬性约束 <span class="math">\(c_1(\vec{x}), c_2(\vec{x}), ...\)</span> 转化成损失函数 <span class="math">\(g(c_i(\vec{x}))\)</span> 。其实这也是个非常简单的问题，因为我们上面定义过， <span class="math">\(c_i(\vec{x}) \geq 0\)</span> 代表第 <span class="math">\(i\)</span> 个硬性约束是满足的， <span class="math">\(c_i(\vec{x}) &lt; 0\)</span> 代表第 <span class="math">\(i\)</span> 个硬性约束是没有满足的，所以我们大可给 <span class="math">\(c_i(\vec{x})\)</span> 外面套一个ReLU函数 <a class="footnote-reference brackets" href="#id58" id="id57">8</a> ，变成 <span class="math">\(\text{ReLU}(- c_i(\vec{x}))\)</span> 。不难验证这种形式是完全符合对损失函数的定义的。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id58"><span class="brackets"><a class="fn-backref" href="#id57">8</a></span></dt>
+<dd><p>ReLU函数是神经网络里目前最常用的激活函数，表达式是 <span class="math">\(\text{ReLU}(x) = \max\{0, x\}\)</span> 。图像大致走势是，取 <span class="math">\(x \geq 0\)</span> 的部分，把 <span class="math">\(x &lt; 0\)</span> 的部分全部砍成0。</p>
+</dd>
+</dl>
+<p>所以到这里我们成功把带约束、带边界的单一目标函数最小化问题，转化成了一个等价的无约束、带边界的单一目标函数最小化问题：找到一个 <span class="math">\(\vec{x}_0 \in \mathbb{X}\)</span> ，使得</p>
+<div class="math">
+\begin{equation*}
+\forall \vec{x} \neq \vec{x}_0, \vec{x} \in \mathbb{X}: \quad L(\vec{x}_0) \leq L(\vec{x})
+\end{equation*}
+</div>
+<p>其中 <span class="math">\(L(\vec{x})\)</span> 是损失函数和 <a class="footnote-reference brackets" href="#id60" id="id59">9</a></p>
+<div class="math">
+\begin{equation*}
+L(\vec{x}) = f(\vec{x}) + \sum_{i = 1}^n g(c_i(\vec{x}))
+\end{equation*}
+</div>
+<dl class="footnote brackets">
+<dt class="label" id="id60"><span class="brackets"><a class="fn-backref" href="#id59">9</a></span></dt>
+<dd><p>即total loss。</p>
+</dd>
+</dl>
+<p>再次验证等价性：当所有硬性约束都满足的时候，加号右侧的项变成0，此时 <span class="math">\(L(\vec{x}) = f(\vec{x})\)</span> ，因此当找到最优解 <span class="math">\(\vec{x}_0\)</span> 的时候， <span class="math">\(L(\vec{x}_0) = f(\vec{x}_0)\)</span> 。因此两种描述方法定义的最优解完全一致。</p>
+<p>接下来介绍几种广泛应用的、能解决无约束、带边界的优化问题的最小化算法</p>
+<div class="section" id="bfgs">
+<h3><a class="toc-backref" href="#id129"><span class="sectnum">4.2.1</span> BFGS</a></h3>
+<p>BFGS <a class="footnote-reference brackets" href="#id64" id="id61">10</a> <a class="citation-reference" href="#nocedal2006" id="id62">[nocedal2006]</a> 是一种求解无约束、非线性函数最小值的迭代算法，是众多拟牛顿法 <a class="footnote-reference brackets" href="#id65" id="id63">11</a> 算法中的一种。</p>
+<p>牛顿法求一维函数的零点的大致步骤是</p>
+<ol class="arabic simple">
+<li><p>选取一个起始点 <span class="math">\(x_0\)</span></p></li>
+<li><p>迭代地求 <span class="math">\(x_{n + 1} = x_n - {f(x_n) \over f'(x_n)}\)</span> ，直到 <span class="math">\(|x_{n + 1} - x_n|\)</span> 足够小</p></li>
+</ol>
+<p>多维函数情况下的做法也是一样的</p>
+<ol class="arabic simple">
+<li><p>选取一个起始向量 <span class="math">\(\vec{x}_0\)</span></p></li>
+<li><p>迭代地求 <span class="math">\(\vec{x}_{n + 1} = \vec{x}_n - [J_f(\vec{x}_n)]^{-1} f(\vec{x}_n)\)</span> ，其中 <span class="math">\(J_f(\vec{x}_n)\)</span> 是目标函数在 <span class="math">\(\vec{x}_n\)</span> 处的雅可比矩阵，直到 <span class="math">\(| \vec{x}_{n + 1} - \vec{x}_n |\)</span> 足够小</p></li>
+</ol>
+<p>寻找目标函数的最小值点实际上就是找到目标函数一阶导数的零点，所以在上述步骤中把 <span class="math">\(f(x)\)</span> 替换成 <span class="math">\(f'(x)\)</span> 、 <span class="math">\(f'(x)\)</span> 替换成 <span class="math">\(f''(x)\)</span> 就可以了。对于多维情况，迭代式可以写成</p>
+<div class="math">
+\begin{equation*}
+\vec{x}_{n + 1} = \vec{x}_n - [H_f(\vec{x}_n)]^{-1} \nabla f(\vec{x}_n)
+\end{equation*}
+</div>
+<p>其中 <span class="math">\(H_f(\vec{x}_n)\)</span> 是目标函数 <span class="math">\(f(\vec{x})\)</span> 在 <span class="math">\(\vec{x}_n\)</span> 处的海森矩阵。海森矩阵的第 <span class="math">\(i\)</span> 行、第 <span class="math">\(j\)</span> 列的值是 <span class="math">\({\partial^2 f \over \partial x_i \partial x_j}\)</span> 。</p>
+<p>所谓拟牛顿法就是在求零点的迭代式中不使用雅可比矩阵的逆矩阵，也即在求极值的迭代式中不使用海森矩阵的逆矩阵，而使用雅可比矩阵的逆矩阵、海森矩阵的逆矩阵的某种近似，记为 <span class="math">\(B_n^{-1}\)</span> ，因为在一些实际问题中，函数的在某点的雅可比矩阵、海森矩阵可能求解非常困难、非常耗时（比如输入向量的维数非常大）、或是根本无法求解（函数在这一点上不光滑）。拟牛顿法的迭代式是</p>
+<div class="math">
+\begin{equation*}
+\vec{x}_{n + 1} = \vec{x}_n - B_n^{-1} \nabla f(\vec{x}_n)
+\end{equation*}
+</div>
+<p>BFGS使用的近似方法是迭代法，迭代式是</p>
+<div class="math">
+\begin{equation*}
+\begin{aligned}
+    B_{n + 1} &amp;= B_n + {y_n y_n^T \over y_n^T \Delta x_n} - {B_n \Delta x_n (B_n \Delta x_n)^T \over \Delta x_n^T B_n \Delta x_n} \\
+    B_0 &amp;= I
+\end{aligned}
+\end{equation*}
+</div>
+<p>其中 <span class="math">\(\Delta x_n = - \alpha_n B_n^{-1} \nabla f(x_n)\)</span> ， <span class="math">\(\alpha_n\)</span> 是Wolfe系数。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id64"><span class="brackets"><a class="fn-backref" href="#id61">10</a></span></dt>
+<dd><p>BFGS的全称是Broyden–Fletcher–Goldfarb–Shanno算法。</p>
+</dd>
+<dt class="label" id="id65"><span class="brackets"><a class="fn-backref" href="#id63">11</a></span></dt>
+<dd><p>即quasi-Newton methods。</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="id66">
+<h3><a class="toc-backref" href="#id130"><span class="sectnum">4.2.2</span> 差分进化</a></h3>
+<p>差分进化 <a class="footnote-reference brackets" href="#id70" id="id67">12</a> <a class="citation-reference" href="#storn1997" id="id68">[storn1997]</a> 是一种进化算法。所谓进化算法，大多数是一种受到了自然界生物繁衍过程的启发、在算法中模拟出繁殖、突变、自然选择等生物进化现象的算法。进化算法相对于梯度下降类算法、拟牛顿法算法（如上面提到的BFGS）的一个巨大优势是，进化算法对函数的连续性、可导性没有任何要求，因为进化算法在迭代过程中不会计算梯度，所以进化算法可以找到有噪声、不光滑的函数的最小值。进化算法的劣势在于，演化过程是带有随机性的，因此不具有可复现性，而且因为不利用梯度信息，迭代的次数通常比梯度下降类算法要多很多。</p>
+<p>进化算法的一般步骤是</p>
+<ol class="arabic simple">
+<li><p>随机从参数向量空间中选取一定数量的向量 <span class="math">\(\vec{x}_1, \vec{x}_2, ...\)</span>，作为第一代样本</p></li>
+<li><p>选取适应值最高的几个样本</p></li>
+<li><p>最适应的几个样本之间通过杂交、变异等方式产生下一代</p></li>
+<li><p>从下一代中选取适应值最高的几个样本，代替掉上一代中适应值最低的样本</p></li>
+<li><p>回到第2步，直到达到最大迭代次数、或者预定的适应值</p></li>
+</ol>
+<p>差分进化算法的一般步骤是</p>
+<ol class="arabic">
+<li><p>随机从参数向量空间中选取一定数量的向量 <span class="math">\(\vec{x}_1, \vec{x}_2, ...\)</span>，作为第一代样本</p></li>
+<li><p>对样本池中的每个样本 <span class="math">\(\vec{x}_k\)</span></p>
+<ol class="arabic">
+<li><p>从样本池中随机选取三个互不相同、且与 <span class="math">\(\vec{x}_k\)</span> 也不同的样本 <span class="math">\(\vec{a}, \vec{b}, \vec{c}\)</span></p></li>
+<li><p>样本 <span class="math">\(\vec{x}_k\)</span> 与这三个样本按概率杂交、变异产生一个后代 <span class="math">\(\vec{y}_k\)</span></p>
+<p>假设样本是n维的，具体的杂交、变异方式是对每一维都随机取一个服从均匀分布的数 <span class="math">\(r_i\)</span> ，即 <span class="math">\(r_i \sim U(0, 1)\)</span> ，然后令后代 <span class="math">\(\vec{y}_k\)</span> 的第 <span class="math">\(i\)</span> 维变成</p>
+<div class="math">
+\begin{equation*}
+y_{k, i} = \left\{\begin{aligned}
+    &amp; a_i + F \times (b_i - c_i),   &amp;&amp;\qquad r_i &lt; C \\
+    &amp; x_{k, i},                     &amp;&amp;\qquad r_i \geq C
+\end{aligned}\right.
+\end{equation*}
+</div>
+<p>其中 <span class="math">\(C \in [0, 1]\)</span> 是一个在迭代开始前就选取好的超参数 <a class="footnote-reference brackets" href="#id71" id="id69">13</a> 杂交概率， <span class="math">\(F \in [0, 2]\)</span> 也是一个超参数，称为差分权重。这两个超参数对优化过程的性能有非常大的影响。</p>
+</li>
+<li><p>如果 <span class="math">\(f(\vec{y}_k) &lt; f(\vec{x}_k)\)</span> ，那么就把样本池里的 <span class="math">\(\vec{x}_k\)</span> 替换成后代 <span class="math">\(\vec{y}_k\)</span></p></li>
+</ol>
+</li>
+<li><p>回到步骤2，直到达到最大迭代次数限制、或者预定的适应值</p></li>
+</ol>
+<dl class="footnote brackets">
+<dt class="label" id="id70"><span class="brackets"><a class="fn-backref" href="#id67">12</a></span></dt>
+<dd><p>即differential evolution。</p>
+</dd>
+<dt class="label" id="id71"><span class="brackets"><a class="fn-backref" href="#id69">13</a></span></dt>
+<dd><p>即hyper-parameter。</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="id72">
+<h3><a class="toc-backref" href="#id131"><span class="sectnum">4.2.3</span> 粒子群</a></h3>
+<p>和差分进化一样，粒子群算法 <a class="footnote-reference brackets" href="#id75" id="id73">14</a> <a class="citation-reference" href="#kennedy1995" id="id74">[kennedy1995]</a> 也是一种进化算法，但是粒子群算法的直接启发是鸟群、鱼群的觅食。鸟群、鱼群在觅食的的时候，自己的行动方向不仅取决于自己的感觉，还与整个群体的头领的移动方向有关，粒子群模仿了这一点，给每个样本在每个时刻根据一些规则计算出下一个时刻的移动方向，逐步地、迭代地使整个群体接近全局最小值。</p>
+<p>粒子群算法的具体步骤是</p>
+<ol class="arabic">
+<li><p>初始化 <span class="math">\(S\)</span> 个个体，随机指定位置 <span class="math">\(\vec{x}_i\)</span> ，并且用 <span class="math">\(\vec{p}_i\)</span> 记录个体经过的最佳位置</p></li>
+<li><p>初始化全局的最佳位置 <span class="math">\(\vec{g} = \operatorname{argmin}_{\vec{p}_i} \{f(\vec{p}_i)\}\)</span></p></li>
+<li><p>初始化每个个体的速度 <span class="math">\(\vec{v}_i\)</span></p></li>
+<li><p>对于每个个体，更新位置和速度</p>
+<p>更新位置和速度的具体步骤是</p>
+<ol class="arabic">
+<li><p>将每个个体的速度向量 <span class="math">\(\vec{v}_i\)</span> 更新为 <span class="math">\(\omega \vec{v}_i + \phi_p r_p (\vec{p}_i - \vec{x}_i) + \phi_g r_g (\vec{g} - \vec{x}_i)\)</span></p>
+<p>其中 <span class="math">\(\vec{r}_p, \vec{r}_q\)</span> 是n维向量，每一维的值都服从均分布 <span class="math">\(U(0, 1)\)</span> ； <span class="math">\(\omega, \phi_p, \phi_g\)</span> 是三个超参数，分别表示速度对位置的影响大小、个体的独立程度、依赖社会的程度。如果 <span class="math">\(\phi_g\)</span> 很大，那么个体会更倾向于相信群体，在位置更新的时候会倾向于往全局最佳值的位置走。反之如果 <span class="math">\(\phi_p\)</span> 很大，那么个体会更独立、更自信一些，在位置更新的时候会更倾向于自己的判断，倾向于往自己经过的最佳位置的方向走。</p>
+</li>
+<li><p>将每个个体的位置向量 <span class="math">\(\vec{x}_i\)</span> 更新为 <span class="math">\(\vec{x}_i + \vec{v}_i\)</span></p></li>
+<li><p>评估这次位置更新，如果发现新位置的函数值小于自己已知的最佳位置处的函数值，即 <span class="math">\(f(\vec{x}_i) &lt; f(\vec{p}_i)\)</span> ，就把 <span class="math">\(\vec{p}_i\)</span> 更新为现在的新位置，同时与全局最佳位置处的函数值做比较，如果发现 <span class="math">\(f(\vec{p}_i) &lt; f(\vec{g})\)</span> ，那么把全局最佳位置更新为自己的新位置</p></li>
+</ol>
+</li>
+<li><p>回到步骤4，直到达到最大迭代次数限制、或者达到了预定的函数目标值</p></li>
+</ol>
+<dl class="footnote brackets">
+<dt class="label" id="id75"><span class="brackets"><a class="fn-backref" href="#id73">14</a></span></dt>
+<dd><p>即particle swarm。</p>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="section" id="id76">
+<h1><a class="toc-backref" href="#id132"><span class="sectnum">5</span> 自动化设计的程序实现</a></h1>
+<p>本文实现了一个简单的参数自动设计工具sizer <a class="footnote-reference brackets" href="#id78" id="id77">15</a> 。整个程序使用Python编写，使用了面向对象的设计方法。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id78"><span class="brackets"><a class="fn-backref" href="#id77">15</a></span></dt>
+<dd><p>代码仓库 <a class="reference external" href="https://github.com/aiifabbf/sizer">https://github.com/aiifabbf/sizer</a></p>
+</dd>
+</dl>
+<div class="section" id="id79">
+<h2><a class="toc-backref" href="#id133"><span class="sectnum">5.1</span> 使用示例</a></h2>
+<p>使用sizer的典型工作流是</p>
+<ol class="arabic simple">
+<li><p>设计师用自己顺手的电路原理图编辑器，如KiCAD、Cadence Virtuoso等，绘制出电路原理图</p></li>
+<li><p>在需要设计的参数处留下占位符。比如如果需要设计晶体管的长度，就在原理图编辑器里指定晶体管长度为 <code>{w1}</code> ，在变量两边加大括号</p></li>
+<li><p>将原理图导出为SPICE网表。也可以在这一步手动打开SPICE网表，在需要设计的参数处留占位符</p></li>
+<li><p>用 <code>sizer.CircuitTemplate</code> 读入SPICE网表</p></li>
+<li><p>用Python语言自定义损失函数</p></li>
+<li><p>指定变量的边界范围</p></li>
+<li><p>从 <code>sizer.optimizers</code> 中选择一种优化算法</p></li>
+<li><p>运行，等待结果</p></li>
+</ol>
+<p>从第4步开始，一切工作都在Python中完成。作者没有设计图形界面的原因是，Python语言本身已经足够简单，且用代码定制优化需求灵活方便，并且大而全的软件设计模式不符合KISS原则。</p>
+<p>以一个简单Miller补偿的二阶运算放大器为例，SPICE网表如下</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vp GND dc 1.65 ac 0.5
+V2  Vn GND dc 1.65 ac -0.5
+C2  Vout GND 4e-12
+C1  /3 Vout {cm}
+M7  Vout /6 VDD VDD p_33 l={l7} w={w7}
+M6  Vout /3 GND GND n_33 l={l6} w={w6}
+M2  /3 vp /1 VDD p_33 l={l12} w={w12}
+M1  /2 vn /1 VDD p_33 l={l12} w={w12}
+M4  /3 /2 GND GND n_33 l={l34} w={w34}
+M3  /2 /2 GND GND n_33 l={l34} w={w34}
+M5  /1 /6 VDD VDD p_33 l={l5} w={w5}
+V0  VDD GND 3.3
+M8  /6 /6 VDD VDD p_33 l={l8} w={w8}
+I1  /6 GND 10e-6
+
+.end</code></pre>
+<p>其中大括号括起来的变量都是指定的需要设计的参数。一共13个变量。因为M1和M2是输入差分对管、M3和M4是输入差分对的负载管，所以它们完全对称、尺寸分别相等。</p>
+<div class="figure">
+<img alt="quickstart-demo-schematic.png" id="figure-smc" src="quickstart-demo-schematic.png" />
+<p class="caption">简单Miller补偿的二阶运算放大器电路原理图。网表中的电流镜像源管M8和镜像源管下方的电流源I1未画出。</p>
+</div>
+<p>一个典型的仿真代码文件如下</p>
+<pre class="code python literal-block"><code><span class="keyword namespace">import</span> <span class="name namespace">sizer</span>
+<span class="keyword namespace">import</span> <span class="name namespace">numpy</span> <span class="keyword namespace">as</span> <span class="name namespace">np</span>
+
+<span class="keyword">with</span> <span class="name builtin">open</span><span class="punctuation">(</span><span class="literal string double">&quot;./demos/two-stage-amplifier/two-stage-amp.cir&quot;</span><span class="punctuation">)</span> <span class="keyword">as</span> <span class="name">f</span><span class="punctuation">:</span>
+    <span class="name">circuitTemplate</span> <span class="operator">=</span> <span class="name">sizer</span><span class="operator">.</span><span class="name">CircuitTemplate</span><span class="punctuation">(</span><span class="name">f</span><span class="operator">.</span><span class="name">read</span><span class="punctuation">(),</span> <span class="name">rawSpice</span><span class="operator">=</span><span class="literal string double">&quot;.lib CMOS_035_Spice_Model.lib tt&quot;</span><span class="punctuation">)</span>
+
+<span class="keyword">def</span> <span class="name function">unityGainFrequencyLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="keyword">try</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">maximum</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="punctuation">(</span><span class="literal number float">1e+7</span> <span class="operator">-</span> <span class="name">circuit</span><span class="operator">.</span><span class="name">unityGainFrequency</span><span class="punctuation">)</span> <span class="operator">/</span> <span class="literal number float">1e+7</span><span class="punctuation">)</span>
+    <span class="keyword">except</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="literal number integer">1</span>
+
+<span class="keyword">def</span> <span class="name function">gainLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">maximum</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="punctuation">(</span><span class="literal number float">1e+3</span> <span class="operator">-</span> <span class="name">np</span><span class="operator">.</span><span class="name">abs</span><span class="punctuation">(</span><span class="name">circuit</span><span class="operator">.</span><span class="name">gain</span><span class="punctuation">))</span> <span class="operator">/</span> <span class="literal number float">1e+3</span><span class="punctuation">)</span>
+
+<span class="keyword">def</span> <span class="name function">phaseMarginLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="keyword">try</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">maximum</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="punctuation">(</span><span class="literal number integer">60</span> <span class="operator">-</span> <span class="name">circuit</span><span class="operator">.</span><span class="name">phaseMargin</span><span class="punctuation">)</span> <span class="operator">/</span> <span class="literal number integer">60</span><span class="punctuation">)</span>
+    <span class="keyword">except</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="literal number integer">0</span>
+
+<span class="keyword">def</span> <span class="name function">loss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="name">losses</span> <span class="operator">=</span> <span class="punctuation">[</span><span class="name">phaseMarginLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">),</span> <span class="name">gainLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">),</span> <span class="name">unityGainFrequencyLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">)]</span>
+    <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">sum</span><span class="punctuation">(</span><span class="name">losses</span><span class="punctuation">)</span>
+
+<span class="name">bounds</span> <span class="operator">=</span> <span class="punctuation">{</span>
+    <span class="name">w</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="literal number float">0.5e-6</span><span class="punctuation">,</span> <span class="literal number float">100e-6</span><span class="punctuation">]</span> <span class="keyword">for</span> <span class="name">w</span> <span class="operator word">in</span> <span class="punctuation">[</span><span class="literal string double">&quot;w12&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w34&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w5&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w6&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w7&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w8&quot;</span><span class="punctuation">]</span>
+<span class="punctuation">}</span>
+<span class="name">bounds</span><span class="operator">.</span><span class="name">update</span><span class="punctuation">({</span>
+    <span class="name">l</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="literal number float">0.35e-6</span><span class="punctuation">,</span> <span class="literal number float">50e-6</span><span class="punctuation">]</span> <span class="keyword">for</span> <span class="name">l</span> <span class="operator word">in</span> <span class="punctuation">[</span><span class="literal string double">&quot;l12&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l34&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l5&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l6&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l7&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l8&quot;</span><span class="punctuation">]</span>
+<span class="punctuation">})</span>
+<span class="name">bounds</span><span class="operator">.</span><span class="name">update</span><span class="punctuation">({</span>
+    <span class="literal string double">&quot;cm&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="literal number float">1e-12</span><span class="punctuation">,</span> <span class="literal number float">10e-12</span><span class="punctuation">]</span>
+<span class="punctuation">})</span>
+
+<span class="name">optimizer</span> <span class="operator">=</span> <span class="name">sizer</span><span class="operator">.</span><span class="name">optimizers</span><span class="operator">.</span><span class="name">ScipyMinimizeOptimizer</span><span class="punctuation">(</span><span class="name">circuitTemplate</span><span class="punctuation">,</span> <span class="name">loss</span><span class="punctuation">,</span> <span class="name">bounds</span><span class="punctuation">,</span> <span class="name">earlyStopLoss</span><span class="operator">=</span><span class="literal number integer">0</span><span class="punctuation">)</span>
+
+<span class="name">circuit</span> <span class="operator">=</span> <span class="name">optimizer</span><span class="operator">.</span><span class="name">run</span><span class="punctuation">()</span>
+<span class="keyword">print</span><span class="punctuation">(</span><span class="name">circuit</span><span class="operator">.</span><span class="name">netlist</span><span class="punctuation">)</span></code></pre>
+<p>其中</p>
+<ul>
+<li><pre class="code python literal-block"><code><span class="keyword namespace">import</span> <span class="name namespace">sizer</span>
+<span class="keyword namespace">import</span> <span class="name namespace">numpy</span> <span class="keyword namespace">as</span> <span class="name namespace">np</span></code></pre>
+<p>用于导入sizer库和Python的科学计算库numpy。</p>
+</li>
+<li><pre class="code python literal-block"><code><span class="keyword">with</span> <span class="name builtin">open</span><span class="punctuation">(</span><span class="literal string double">&quot;./demos/two-stage-amplifier/two-stage-amp.cir&quot;</span><span class="punctuation">)</span> <span class="keyword">as</span> <span class="name">f</span><span class="punctuation">:</span>
+    <span class="name">circuitTemplate</span> <span class="operator">=</span> <span class="name">sizer</span><span class="operator">.</span><span class="name">CircuitTemplate</span><span class="punctuation">(</span><span class="name">f</span><span class="operator">.</span><span class="name">read</span><span class="punctuation">(),</span> <span class="name">rawSpice</span><span class="operator">=</span><span class="literal string double">&quot;.lib CMOS_035_Spice_Model.lib tt&quot;</span><span class="punctuation">)</span></code></pre>
+<p>读入SPICE网表，生成电路模板 <code>sizer.CircuitTemplate</code> 对象。</p>
+</li>
+<li><pre class="code python literal-block"><code><span class="keyword">def</span> <span class="name function">unityGainFrequencyLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="keyword">try</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">maximum</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="punctuation">(</span><span class="literal number float">1e+7</span> <span class="operator">-</span> <span class="name">circuit</span><span class="operator">.</span><span class="name">unityGainFrequency</span><span class="punctuation">)</span> <span class="operator">/</span> <span class="literal number float">1e+7</span><span class="punctuation">)</span>
+    <span class="keyword">except</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="literal number integer">1</span>
+
+<span class="keyword">def</span> <span class="name function">gainLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">maximum</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="punctuation">(</span><span class="literal number float">1e+3</span> <span class="operator">-</span> <span class="name">np</span><span class="operator">.</span><span class="name">abs</span><span class="punctuation">(</span><span class="name">circuit</span><span class="operator">.</span><span class="name">gain</span><span class="punctuation">))</span> <span class="operator">/</span> <span class="literal number float">1e+3</span><span class="punctuation">)</span>
+
+<span class="keyword">def</span> <span class="name function">phaseMarginLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="keyword">try</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">maximum</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="punctuation">(</span><span class="literal number integer">60</span> <span class="operator">-</span> <span class="name">circuit</span><span class="operator">.</span><span class="name">phaseMargin</span><span class="punctuation">)</span> <span class="operator">/</span> <span class="literal number integer">60</span><span class="punctuation">)</span>
+    <span class="keyword">except</span><span class="punctuation">:</span>
+        <span class="keyword">return</span> <span class="literal number integer">1</span></code></pre>
+<p>定义了3个硬约束，分别是</p>
+<ul class="simple">
+<li><p>单位增益带宽不小于10 MHz</p></li>
+<li><p>直流增益不小于1,000倍，即60 dB</p></li>
+<li><p>相位裕度不小于60度</p></li>
+</ul>
+<p>同时使用了ReLU损失函数形式，并且做了归一化处理。</p>
+<p>单位增益、相位裕度的损失函数定义中含有处理异常的 <code>try...except</code> 代码块的原因是，作者大量实验观察到，有时优化算法会生成一个根本不具有放大功能的异常电路，此时单位增益、相位裕度是无法定义的，所以直接令损失函数为1，这样可以告诉优化器设计师对这个电路很不满意，方便优化器做出下一步判断。</p>
+</li>
+<li><pre class="code python literal-block"><code><span class="keyword">def</span> <span class="name function">loss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="name">losses</span> <span class="operator">=</span> <span class="punctuation">[</span><span class="name">phaseMarginLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">),</span> <span class="name">gainLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">),</span> <span class="name">unityGainFrequencyLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">)]</span>
+    <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">sum</span><span class="punctuation">(</span><span class="name">losses</span><span class="punctuation">)</span></code></pre>
+<p>将三个损失函数加起来，形成了total loss。</p>
+</li>
+<li><pre class="code python literal-block"><code><span class="name">bounds</span> <span class="operator">=</span> <span class="punctuation">{</span>
+    <span class="name">w</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="literal number float">0.5e-6</span><span class="punctuation">,</span> <span class="literal number float">100e-6</span><span class="punctuation">]</span> <span class="keyword">for</span> <span class="name">w</span> <span class="operator word">in</span> <span class="punctuation">[</span><span class="literal string double">&quot;w12&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w34&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w5&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w6&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w7&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;w8&quot;</span><span class="punctuation">]</span>
+<span class="punctuation">}</span>
+<span class="name">bounds</span><span class="operator">.</span><span class="name">update</span><span class="punctuation">({</span>
+    <span class="name">l</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="literal number float">0.35e-6</span><span class="punctuation">,</span> <span class="literal number float">50e-6</span><span class="punctuation">]</span> <span class="keyword">for</span> <span class="name">l</span> <span class="operator word">in</span> <span class="punctuation">[</span><span class="literal string double">&quot;l12&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l34&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l5&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l6&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l7&quot;</span><span class="punctuation">,</span> <span class="literal string double">&quot;l8&quot;</span><span class="punctuation">]</span>
+<span class="punctuation">})</span>
+<span class="name">bounds</span><span class="operator">.</span><span class="name">update</span><span class="punctuation">({</span>
+    <span class="literal string double">&quot;cm&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="literal number float">1e-12</span><span class="punctuation">,</span> <span class="literal number float">10e-12</span><span class="punctuation">]</span>
+<span class="punctuation">})</span></code></pre>
+<p>指定每个设计参数的边界范围。设定了每个晶体管的宽度在 <span class="math">\([0.5 \mu, 100 \mu]\)</span> 之间，长度在 <span class="math">\([0.35 \mu, 50 \mu]\)</span> 之间，补偿电容在 <span class="math">\([1 p, 10 p]\)</span> 之间。</p>
+</li>
+<li><pre class="code python literal-block"><code><span class="name">optimizer</span> <span class="operator">=</span> <span class="name">sizer</span><span class="operator">.</span><span class="name">optimizers</span><span class="operator">.</span><span class="name">ScipyMinimizeOptimizer</span><span class="punctuation">(</span><span class="name">circuitTemplate</span><span class="punctuation">,</span> <span class="name">loss</span><span class="punctuation">,</span> <span class="name">bounds</span><span class="punctuation">,</span> <span class="name">earlyStopLoss</span><span class="operator">=</span><span class="literal number integer">0</span><span class="punctuation">)</span></code></pre>
+<p>指定目标函数优化算法是 <code>scipy</code> 实现的BFGS算法。指定电路模板、损失函数、变量边界，此外还指定了一旦遇到某个具体电路的total loss是0就立即停止优化，因为这个示例里，没有目标函数，只有三个硬性约束，只要达到就好，total loss为0即说明三个硬性约束已经全部同时满足，没有必要再继续优化下去了。</p>
+</li>
+<li><pre class="code python literal-block"><code><span class="name">circuit</span> <span class="operator">=</span> <span class="name">optimizer</span><span class="operator">.</span><span class="name">run</span><span class="punctuation">()</span>
+<span class="keyword">print</span><span class="punctuation">(</span><span class="name">circuit</span><span class="operator">.</span><span class="name">netlist</span><span class="punctuation">)</span></code></pre>
+<p>开始运行优化。优化结束后， <code>optimzer.run()</code> 才会返回表示最优电路的 <code>sizer.Circuit</code> 对象，然后第二行会打印出最优电路的SPICE网表。</p>
+<p>这个示例只需要大概20秒就可以出结果。</p>
+</li>
+</ul>
+</div>
+<div class="section" id="id80">
+<h2><a class="toc-backref" href="#id134"><span class="sectnum">5.2</span> 程序整体框架</a></h2>
+<p>程序包含三个模块</p>
+<ul>
+<li><p>顶层模块 <code>sizer</code></p>
+<p>包含三个重要的类</p>
+<ul>
+<li><p><code>sizer.CircuitTemplate</code> 代表电路模板</p>
+<p>主要用来读取含有未定参数的电路的SPICE网表，并在优化算法调用自己时，生成具体电路 <code>sizer.Circuit</code> 对象，传入用户自定义的损失函数里。</p>
+</li>
+<li><p><code>sizer.Circuit</code> 代表具体电路</p>
+<p>表示一个不含有任何未确定参数的具体的、完全确定的电路，由 <code>sizer.CircuitTemplate</code> 加上所有变量的定值之后实例化产生。提供了许多方便直接提取性能指标的帮助 <span class="docutils literal">getter</span> 方法，例如</p>
+<ul class="simple">
+<li><p><code>sizer.Circuit.gain</code> 可直接得到这个具体电路的直流增益</p></li>
+<li><p><code>sizer.Circuit.bandwidth</code> 可直接得到带宽</p></li>
+<li><p><code>sizer.Circuit.phaseMargin</code> 可直接得到相位裕度</p></li>
+<li><p><code>sizer.Circuit.unityGainFrequency</code> 可直接得到单位增益带宽</p></li>
+</ul>
+<p>这些 <span class="docutils literal">getter</span> 方法内部的实现仍然是先做仿真、调用 <code>sizer.calculators</code> 里面的计算器函数、从仿真波形中提取性能参数。但是将这些方法与 <code>sizer.Circuit</code> 对象绑定在一起，可以给用户定义损失函数提供很大的便利，例如用户在定义增益损失函数的时候，可以直接写</p>
+<pre class="code python literal-block"><code><span class="keyword">def</span> <span class="name function">gainLoss</span><span class="punctuation">(</span><span class="name">circuit</span><span class="punctuation">):</span>
+    <span class="name">gain</span> <span class="operator">=</span> <span class="name">circuit</span><span class="operator">.</span><span class="name">gain</span> <span class="comment single"># 可以一行就得到增益！</span>
+    <span class="keyword">return</span> <span class="name">np</span><span class="operator">.</span><span class="name">max</span><span class="punctuation">(</span><span class="literal number integer">0</span><span class="punctuation">,</span> <span class="literal number integer">1000</span> <span class="operator">-</span> <span class="name">gain</span><span class="punctuation">)</span> <span class="comment single"># 此处使用了ReLU，你也可以用别的</span></code></pre>
+<p>而无需在损失函数手写冗长的AC仿真语句、再调用计算器函数提取性能参数。此外这些方法还会自动从SPICE网表中找到输入节点、输出节点。 <a class="footnote-reference brackets" href="#id82" id="id81">16</a></p>
+<dl class="footnote brackets">
+<dt class="label" id="id82"><span class="brackets"><a class="fn-backref" href="#id81">16</a></span></dt>
+<dd><p>支持 <span class="docutils literal">vin+, <span class="pre">vin-,</span> vi+, <span class="pre">vi-,</span> vp, vn, vin, vi</span> 命名的、及其大小写无关的输入节点，也支持差分输入；支持 <span class="docutils literal">vout, vo</span> 命名的、及其大小写无关的输出节点。</p>
+</dd>
+</dl>
+</li>
+<li><p><code>sizer.CircuitTemplateList</code> 代表多个电路模板的集合</p>
+<p>通常，评价一个电路需要频域、直流、瞬态等多方面性能指标，为了得到这些性能指标，需要对一个核心电路加不同的外围电路，再做AC、DC、TRAN等各种仿真，最后再算出综合损失函数。</p>
+<p>比如在设计运算放大器的时候，为了得到增益、相位裕度等频域指标，需要把放大器接成开环、加输入直流偏置，然后做AC仿真，但为了得到转换速率等瞬态指标，需要把放大器接成单位增益反馈形式，然后做TRAN仿真。显然这么多操作不可能用一个SPICE网表就能实现，需要多个网表同时替换样本参数向量，再各自做不同的仿真，从多个仿真结果中提取性能指标。</p>
+</li>
+</ul>
+</li>
+<li><p>优化器 <code>sizer.optimizers</code></p>
+<p>包含许多优化算法，可以在运行搜索前指定用哪个算法。常用的有</p>
+<ul class="simple">
+<li><p><code>sizer.optimizers.ScipyDifferentialEvolutionOptimizer</code> 是 <code>scipy</code> 实现的differential evolution优化算法</p></li>
+<li><p><code>sizer.optimizers.ScipyMinimizeOptimizer</code> 是 <code>scipy</code> 实现的L-BFGS算法</p></li>
+<li><p><code>sizer.optimizers.PyswarmParticleSwarmOptimizer</code> 是pyswarm库实现的particle swarm算法</p></li>
+</ul>
+</li>
+<li><p>计算器 <code>sizer.calculators</code></p>
+<p>包含从仿真结果波形中提取性能指标的计算函数。类似Cadence的calculators工具，输入一个波形，从波形中测量出性能指标（比如从频率响应波形中测量出PM）。常用的有</p>
+<ul class="simple">
+<li><p><code>sizer.calculators.gain()</code> 从频率响应波形中提取直流增益</p></li>
+<li><p><code>sizer.calculators.bandwidth()</code> 从频率响应波形中提取3 dB带宽</p></li>
+<li><p><code>sizer.calculators.phaseMargin()</code> 从频率响应波形中提取相位裕度</p></li>
+<li><p><code>sizer.calculators.unityGainFrequency()</code> 从频率响应波形中提取单位增益频率（增益降到1的时候的频率）</p></li>
+<li><p><code>sizer.calculators.slewRate()</code> 从瞬态波形中提取切换速率</p></li>
+<li><p><code>sizer.calculators.risingTime()</code> 从瞬态波形中提取上升时间</p></li>
+<li><p><code>sizer.calculators.fallingTime()</code> 从瞬态波形中提取下降时间</p></li>
+</ul>
+<p>基本上覆盖了常用的功能。但实际上，由于 <code>sizer.Circuit</code> 里已经预先定义好了很多帮助参数，如 <code>sizer.Circuit.gain</code> ，可以直接得到增益，通常情况下没有必要手动提取出波形再用计算器分析。</p>
+</li>
+</ul>
+</div>
+<div class="section" id="id83">
+<h2><a class="toc-backref" href="#id135"><span class="sectnum">5.3</span> 性能参数提取</a></h2>
+<p>在 <code>sizer.calculators</code> 模块里，作者用numpy科学计算库，实现了很多从波形中提取性能指标的计算器函数，功能和Cadence Spectre里内置的计算器差不多。经过测试，这些函数性能非常好，大多数能在40 μs内返回结果。</p>
+<p>常用的计算器函数的实现细节如下</p>
+<ul>
+<li><p><code>sizer.calculators.gain()</code> 从频率响应波形中提取直流增益</p>
+<p>会先检查输入的频率响应的频率范围包不包含0 Hz，如果不包含会报错；如果包含，会返回离0 Hz最近的频率响应复数。</p>
+</li>
+<li><p><code>sizer.calculators.bandwidth()</code> 从频率响应波形中提取3 dB带宽</p>
+<p>会先使用 <code>sizer.calculators.gain()</code> 得到直流增益，再算出直流增益的 <span class="math">\(1 / \sqrt{2}\)</span> ，用一阶线性曲线给频率响应点做差值，解出直流增益 <span class="math">\(1 / \sqrt{2}\)</span> 倍处的频率。</p>
+</li>
+<li><p><code>sizer.calculators.phaseMargin()</code> 从频率响应波形中提取相位裕度</p>
+<p>会先用 <code>sizer.calculators.unityGainFrequency()</code> 得到单位增益频率，然后用一阶线性曲线给横跨单位增益频率的两个频率之间的频率响应区间做插值，得到单位增益频率处的相位。</p>
+</li>
+<li><p><code>sizer.calculators.unityGainFrequency()</code> 从频率响应波形中提取单位增益频率（增益降到1的时候的频率）</p>
+<p>会先检查频率响应存不存在零点，然后再用一阶线性给横跨正负轴的两个频率点之间的频率区间做插值，解出零点。</p>
+</li>
+<li><p><code>sizer.calculators.slewRate()</code> 从瞬态波形中提取切换速率</p>
+<p>一边给瞬时曲线做一阶差分，一边记录一阶差分的最大值。复杂度 <span class="math">\(O(n)\)</span> ，一次扫描就能给出结果。</p>
+</li>
+<li><p><code>sizer.calculators.risingTime()</code> 从瞬态波形中提取上升时间</p>
+<p>会先寻找低阈值所在的频率点，再从这个频率点之后找高阈值所在的频率点。复杂度 <span class="math">\(O(n)\)</span> ，一次扫描就能得出结果。</p>
+</li>
+<li><p><code>sizer.calculators.fallingTime()</code> 从瞬态波形中提取下降时间</p>
+<p>和 <code>sizer.calculators.risingTime()</code> 同理。</p>
+</li>
+</ul>
+</div>
+<div class="section" id="id84">
+<h2><a class="toc-backref" href="#id136"><span class="sectnum">5.4</span> 调用仿真器</a></h2>
+<p>sizer使用的是开源仿真器ngspice <a class="footnote-reference brackets" href="#id87" id="id85">17</a> 。ngspice支持三种调用模式</p>
+<ul>
+<li><p>ngspice以一个守护进程运行</p>
+<p>程序通过socket与它通信，向其提交仿真申请，并等待ngspice仿真完成后通过socket返回结果。</p>
+</li>
+<li><p>动态链接ngspice的动态链接库</p>
+<p>这种情况下ngspice并不是以一个进程独立运行的，而是在宿主程序的内存里以代码段的形式存在。宿主程序直接把包含仿真指令的数组指针、结构体指针传给代码段里的函数。</p>
+<p>这种模式是速度最快的，因为不涉及进程间通信，没有进程间通信开销。但是因为需要生成动态链接库，涉及编译，并且还需要手动管理内存资源分配和释放，并不是最方便的一种。</p>
+</li>
+<li><p>ngspice以一个命令行用户交互程序运行，程序通过子进程和进程间管道 <a class="footnote-reference brackets" href="#id88" id="id86">18</a> 通信</p>
+<p>具体做法是先fork出一个ngspice子进程，然后把子进程的stdin和stdout和自己用pipe连接起来，自己假装成用户给ngspice发送仿真指令，ngspice完成仿真之后，会将仿真结果输出到stdout，stdout正好通过pipe与主进程连接、再把数据输出到主进程。</p>
+</li>
+</ul>
+<dl class="footnote brackets">
+<dt class="label" id="id87"><span class="brackets"><a class="fn-backref" href="#id85">17</a></span></dt>
+<dd><p>ngspice的主页 <a class="reference external" href="http://ngspice.sourceforge.net">http://ngspice.sourceforge.net</a></p>
+</dd>
+<dt class="label" id="id88"><span class="brackets"><a class="fn-backref" href="#id86">18</a></span></dt>
+<dd><p>即pipe。</p>
+</dd>
+</dl>
+<p>作者并没有直接关心与ngspice的交互，这一切都用PySpice库实现了。PySpice可以以第二种和第三种模式调用ngspice。</p>
+</div>
+<div class="section" id="id89">
+<h2><a class="toc-backref" href="#id137"><span class="sectnum">5.5</span> 优化算法的实现</a></h2>
+<p>sizer的优化器在模块 <code>sizer.optimizers</code> 中，目前有</p>
+<ul class="simple">
+<li><p><code>sizer.optimizers.ScipyMinimizeOptimizer</code> 使用的是scipy实现的L-BFGS算法</p></li>
+<li><p><code>sizer.optimizers.ScipyDifferentialEvolutionOptimizer</code> 使用的是scipy实现的差分进化算法</p></li>
+<li><p><code>sizer.optimizers.ScipyDualAnnealingOptimizer</code> 使用的是scipy实现的双退火算法</p></li>
+<li><p><code>sizer.optimizers.ScipyBasinHoppingOptimizer</code> 使用的是scipy实现的盆地跳跃 <a class="footnote-reference brackets" href="#id92" id="id90">19</a> 算法</p></li>
+<li><p><code>sizer.optimizers.PyswarmParticleSwarmOptimizer</code> 使用的是pyswarm库实现的粒子群算法</p></li>
+</ul>
+<p>大量使用scipy、pyswarm等外部库来实现优化算法、而不是自己手动用Python实现的原因是</p>
+<ul class="simple">
+<li><p>这些库经过了大量科学计算的实践，同时是社区开源作品，因此较为成熟可靠。</p></li>
+<li><p>scipy的底层实现是C语言，而且针对Intel CPU做了相当多的优化，比如链接了Intel MKL科学计算库，可以充分利用Intel CPU的SIMD <a class="footnote-reference brackets" href="#id93" id="id91">20</a> 特性，利用多核并行计算来加速。</p></li>
+</ul>
+<dl class="footnote brackets">
+<dt class="label" id="id92"><span class="brackets"><a class="fn-backref" href="#id90">19</a></span></dt>
+<dd><p>即basin hopping算法。</p>
+</dd>
+<dt class="label" id="id93"><span class="brackets"><a class="fn-backref" href="#id91">20</a></span></dt>
+<dd><p>即single instruction multiple data，单指令、多数据。</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="id94">
+<h1><a class="toc-backref" href="#id138"><span class="sectnum">6</span> 实验结果</a></h1>
+<div class="figure">
+<img alt="result-running.png" src="result-running.png" />
+<p class="caption">sizer运行中。运行时，sizer会把当前正在仿真测试的样本电路的total loss、仿真速度打印在屏幕上，图中可知当前正在评价的样本电路的total loss是0.00911，已经非常接近0了；每个样本电路平均花费34.5 ms。这其中的时间开销主要是主进程与ngspice子进程的通信开销。</p>
+</div>
+<div class="figure">
+<img alt="result-finished.png" src="result-finished.png" />
+<p class="caption">sizer运行完成、得到了满足所有设计指标的电路。</p>
+</div>
+<div class="section" id="miller">
+<h2><a class="toc-backref" href="#id139"><span class="sectnum">6.1</span> 设计二阶简单Miller补偿的运算放大器</a></h2>
+<p>简单Miller补偿的二阶运算放大器电路原理图见 <a class="reference internal" href="#figure-smc">此图</a> 。</p>
+<p>设计性能指标目标是</p>
+<ul class="simple">
+<li><p>直流增益不小于1,000，即60 dB</p></li>
+<li><p>带宽不小于5 kHz</p></li>
+<li><p>相位裕度不小于60度</p></li>
+<li><p>单位增益负反馈接法下，从1.65 V到1.75 V的切换速率不小于10 V/μs <a class="footnote-reference brackets" href="#id97" id="id96">21</a></p></li>
+<li><p>单位增益负反馈接法下，过冲不超过10%（输出电压不超过1.76 V）</p></li>
+</ul>
+<dl class="footnote brackets">
+<dt class="label" id="id97"><span class="brackets"><a class="fn-backref" href="#id96">21</a></span></dt>
+<dd><p>关于切换速率slew rate，文献中出现了各种各样的定义和测量方法，本文使用的定义是：10%位点（1.66 V）到90%位点（1.74 V）之间的电压差，除以输出电压从1.66 V上升到1.74 V花费的时间。</p>
+</dd>
+</dl>
+<p>这些指标目标都是0.35 μm工艺条件下，二阶运算放大器的典型性能指标。</p>
+<p>拟设计的电路参数一共13个，分别是</p>
+<ul class="simple">
+<li><p>第一级差分放大器的输入管M1、M2的长、宽</p></li>
+<li><p>第一级差分放大器的负载管M3、M4的长、宽</p></li>
+<li><p>第一级差分放大器的电流偏置管M5的长、宽</p></li>
+<li><p>第二级共源放大器的放大管M6的长、宽</p></li>
+<li><p>第二级共源放大器的负载管M7的长、宽</p></li>
+<li><p>第一级和第二级之间的补偿电容 <span class="math">\(C_m\)</span></p></li>
+<li><p>电流镜源管M8的长、宽</p></li>
+</ul>
+<p>其他环境和配置参数</p>
+<ul class="simple">
+<li><p>使用的工艺是0.35 μm CMOS工艺</p></li>
+<li><p>电源电压是3.3 V</p></li>
+<li><p>输入直流偏置电压是1.65 V</p></li>
+<li><p>输出节点寄生电容4 pF</p></li>
+<li><p>电流镜像源支路上的电流是10 μA</p></li>
+<li><p>所有电路参数取4位有效数字</p></li>
+</ul>
+<p>用来提取频域性能参数的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vp GND dc 1.65 ac 0.5
+V2  Vn GND dc 1.65 ac -0.5
+C2  Vout GND 4e-12
+C1  /3 Vout {cm:.4}
+M7  Vout /6 VDD VDD p_33 l={l7:.4} w={w7:.4}
+M6  Vout /3 GND GND n_33 l={l6:.4} w={w6:.4}
+M2  /3 vp /1 VDD p_33 l={l12:.4} w={w12:.4}
+M1  /2 vn /1 VDD p_33 l={l12:.4} w={w12:.4}
+M4  /3 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M3  /2 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M5  /1 /6 VDD VDD p_33 l={l5:.4} w={w5:.4}
+V0  VDD GND 3.3
+M8  /6 /6 VDD VDD p_33 l={l8:.4} w={w8:.4}
+I1  /6 GND 10e-6
+
+.lib CMOS_035_Spice_Model.lib tt
+
+.end</code></pre>
+<p id="valid-digit-solution">注意网表中大括号 <span class="docutils literal">{}</span> 括起来的是需要设计的参数，例如 <span class="docutils literal"><span class="pre">{l7:.4}</span></span> 表示M7的长度，其中 <span class="docutils literal">l7</span> 是用来区分不同变量的变量名。变量名相同的变量会被认为是同一个变量，例如M3和M4因为是第一级差分对输入管，所以它们完全对称、尺寸完全相同，因而使用了同一个变量 <span class="docutils literal">l34, w34</span> 。变量名后面的 <span class="docutils literal">:.4</span> 表示取4位有效数字。 <a class="footnote-reference brackets" href="#id99" id="id98">22</a></p>
+<dl class="footnote brackets">
+<dt class="label" id="id99"><span class="brackets"><a class="fn-backref" href="#id98">22</a></span></dt>
+<dd><p>这个 <span class="docutils literal">:.4</span> 的写法是Python中字符串格式化的写法，详情见 <a class="reference external" href="https://docs.python.org/3/library/string.html#formatstrings">https://docs.python.org/3/library/string.html#formatstrings</a></p>
+</dd>
+</dl>
+<p>用来提取瞬态性能参数的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vin GND dc pwl(0 1.65 0.5e-6 1.65 0.5e-6 1.75)
+C2  Vout GND 4e-12
+C1  /3 Vout {cm:.4}
+M7  Vout /6 VDD VDD p_33 l={l7:.4} w={w7:.4}
+M6  Vout /3 GND GND n_33 l={l6:.4} w={w6:.4}
+M2  /3 Vin /1 VDD p_33 l={l12:.4} w={w12:.4}
+M1  /2 Vout /1 VDD p_33 l={l12:.4} w={w12:.4}
+M4  /3 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M3  /2 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M5  /1 /6 VDD VDD p_33 l={l5:.4} w={w5:.4}
+V0  VDD GND 3.3
+M8  /6 /6 VDD VDD p_33 l={l8:.4} w={w8:.4}
+I1  /6 GND 10e-6
+
+.lib CMOS_035_Spice_Model.lib tt
+
+.end</code></pre>
+<div class="figure">
+<img alt="smc-results.png" src="smc-results.png" />
+<p class="caption">sizer设计出的4个二阶简单Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。4个电路都是使用particle swarm算法得到的，因为particle swarm算法的随机性，4个电路不完全相同。</p>
+</div>
+<div class="figure">
+<img alt="smc-results-losses.png" src="smc-results-losses.png" />
+<p class="caption">上面的4个运算放大器的分别对应的损失函数随仿真次数的关系曲线 <a class="footnote-reference brackets" href="#id101" id="id100">23</a> 。横轴是第几次仿真，每幅小图的第一张图是增益损失函数，第二张图相位裕度损失函数，第三张图是切换速率损失函数。从图中可以明显看出损失函数值随仿真次数下降、最终到0的趋势。同样因为particle swarm算法的随机性，每个电路的仿真次数都不同，最高的有8000多次（如左上角图），最低的800次（如右上角图）就得出了满足所有设计目标的电路。它们仿真花费的时间差距也很大。</p>
+</div>
+<dl class="footnote brackets">
+<dt class="label" id="id101"><span class="brackets"><a class="fn-backref" href="#id100">23</a></span></dt>
+<dd><p>机器学习中叫做学习曲线。</p>
+</dd>
+</dl>
+<p>一次典型的设计成功的电路的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vp GND dc 1.65 ac 0.5
+V2  Vn GND dc 1.65 ac -0.5
+C2  Vout GND 4e-12
+C1  /3 Vout 1.331e-12
+M7  Vout /6 VDD VDD p_33 l=7.459e-06 w=7.714e-05
+M6  Vout /3 GND GND n_33 l=3.5e-07 w=9.758e-05
+M2  /3 vp /1 VDD p_33 l=7.051e-06 w=5.625e-05
+M1  /2 vn /1 VDD p_33 l=7.051e-06 w=5.625e-05
+M4  /3 /2 GND GND n_33 l=2.938e-06 w=5.17e-05
+M3  /2 /2 GND GND n_33 l=2.938e-06 w=5.17e-05
+M5  /1 /6 VDD VDD p_33 l=5.174e-06 w=5.315e-05
+V0  VDD GND 3.3
+M8  /6 /6 VDD VDD p_33 l=3.533e-05 w=1.332e-06
+I1  /6 GND 10e-6
+
+.lib CMOS_035_Spice_Model.lib tt
+
+.end</code></pre>
+<p>上面的电路测得的性能指标是</p>
+<ul class="simple">
+<li><p>带宽30.143 kHz</p></li>
+<li><p>单位增益带宽29.312 MHz</p></li>
+<li><p>增益1005.8081</p></li>
+<li><p>相位裕度72.8754度</p></li>
+<li><p>切换速率11.5793 V/μs</p></li>
+</ul>
+<table>
+<caption>二阶简单Miller补偿运算放大器实验结果。试验次数21次，成功15次。</caption>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr><th class="head stub"><p>指标</p></th>
+<th class="head"><p>最小值</p></th>
+<th class="head"><p>平均值</p></th>
+<th class="head"><p>最大值</p></th>
+</tr>
+</thead>
+<tbody>
+<tr><th class="stub"><p>增益</p></th>
+<td><p>1000.1451</p></td>
+<td><p>3117.6880</p></td>
+<td><p>19414.3672</p></td>
+</tr>
+<tr><th class="stub"><p>相位裕度</p></th>
+<td><p>60.0382度</p></td>
+<td><p>67.8343度</p></td>
+<td><p>77.4236度</p></td>
+</tr>
+<tr><th class="stub"><p>带宽</p></th>
+<td><p>5.7083 kHz</p></td>
+<td><p>21.7456 kHz</p></td>
+<td><p>37.1980 kHz</p></td>
+</tr>
+<tr><th class="stub"><p>切换速率</p></th>
+<td><p>10.1104 V/μs</p></td>
+<td><p>11.6220 V/μs</p></td>
+<td><p>14.9666 V/μs</p></td>
+</tr>
+<tr><th class="stub"><p>静态电流</p></th>
+<td><p>0.2748 mA</p></td>
+<td><p>1.0709 mA</p></td>
+<td><p>2.3563 mA</p></td>
+</tr>
+<tr><th class="stub"><p>花费时间</p></th>
+<td><p>38 s</p></td>
+<td><p>324 s</p></td>
+<td><p>1019 s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id102">
+<h2><a class="toc-backref" href="#id140"><span class="sectnum">6.2</span> 设计二阶分裂输出Miller补偿的运算放大器</a></h2>
+<div class="figure">
+<img alt="somc.png" src="somc.png" />
+<p class="caption">分裂输出Miller补偿的二阶运算放大器 <a class="footnote-reference brackets" href="#id104" id="id103">24</a> 的电路原理图</p>
+</div>
+<dl class="footnote brackets">
+<dt class="label" id="id104"><span class="brackets"><a class="fn-backref" href="#id103">24</a></span></dt>
+<dd><p>即split-output Miller-compensated two-stage amplifier <a class="citation-reference" href="#tan2013-somc" id="id105">[tan2013-somc]</a> 。</p>
+</dd>
+</dl>
+<p>设计性能指标目标是</p>
+<ul class="simple">
+<li><p>直流增益不小于1,000倍</p></li>
+<li><p>单位增益带宽不小于10 MHz</p></li>
+<li><p>相位裕度不小于60度</p></li>
+<li><p>切换速率不小于3 V/μs</p></li>
+<li><p>过冲不超过10%</p></li>
+</ul>
+<p>拟设计的电路参数一共13个，分别是</p>
+<ul class="simple">
+<li><p>第一级差分放大器的输入管M1、M2的长、宽</p></li>
+<li><p>第一级差分放大器的负载管M3、M4的长、宽</p></li>
+<li><p>第一级差分放大器的电流偏置管M0的长、宽</p></li>
+<li><p>中间级补偿用共源放大器的放大管M6的长、宽</p></li>
+<li><p>中间级补偿用共源放大器的负载管M5的长、宽</p></li>
+<li><p>第一级和中间级之间的补偿电容 <span class="math">\(C_m\)</span></p></li>
+<li><p>第二级共源放大器的放大管M8的长、宽</p></li>
+<li><p>第二级共源放大器的负载管M7的长、宽</p></li>
+<li><p>电流镜源管M9的长、宽</p></li>
+</ul>
+<p>其他环境和配置参数与简单Miller补偿的运算放大器相同。</p>
+<p>用来提取频域性能参数的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vp GND dc 1.65 ac 0.5
+V2  Vn GND dc 1.65 ac -0.5
+C2  Vout GND 10e-12
+C1  /3 /7 {cm:.4}
+M7  Vout /6 VDD VDD p_33 l={l7:.4} w={w7:.4}
+M8  Vout /3 GND GND n_33 l={l8:.4} w={w8:.4}
+M5  /7 /6 VDD VDD p_33 l={l5:.4} w={w5:.4}
+M6  /7 /3 GND GND n_33 l={l6:.4} w={w6:.4}
+M2  /3 vp /1 VDD p_33 l={l12:.4} w={w12:.4}
+M1  /2 vn /1 VDD p_33 l={l12:.4} w={w12:.4}
+M4  /3 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M3  /2 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M0  /1 /6 VDD VDD p_33 l={l0:.4} w={w0:.4}
+V0  VDD GND 3.3
+M9  /6 /6 VDD VDD p_33 l={l9:.4} w={w9:.4}
+I1  /6 GND 10e-6
+
+.lib CMOS_035_Spice_Model.lib tt
+
+.end</code></pre>
+<p>用来提取瞬态响应性能参数的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vin GND dc pwl(0 1.65 0.5e-6 1.65 0.5e-6 1.75)
+C2  Vout GND 10e-12
+C1  /3 /7 {cm:.4}
+M7  Vout /6 VDD VDD p_33 l={l7:.4} w={w7:.4}
+M8  Vout /3 GND GND n_33 l={l8:.4} w={w8:.4}
+M5  /7 /6 VDD VDD p_33 l={l5:.4} w={w5:.4}
+M6  /7 /3 GND GND n_33 l={l6:.4} w={w6:.4}
+M2  /3 Vin /1 VDD p_33 l={l12:.4} w={w12:.4}
+M1  /2 Vout /1 VDD p_33 l={l12:.4} w={w12:.4}
+M4  /3 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M3  /2 /2 GND GND n_33 l={l34:.4} w={w34:.4}
+M0  /1 /6 VDD VDD p_33 l={l0:.4} w={w0:.4}
+V0  VDD GND 3.3
+M9  /6 /6 VDD VDD p_33 l={l9:.4} w={w9:.4}
+I1  /6 GND 10e-6
+
+.lib CMOS_035_Spice_Model.lib tt
+
+.end</code></pre>
+<div class="figure">
+<img alt="somc-results.png" src="somc-results.png" />
+<p class="caption">sizer设计出的4个二阶分裂输出Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。4个电路也都是使用particle swarm算法得到的。</p>
+</div>
+<div class="figure">
+<img alt="somc-results-losses.png" src="somc-results-losses.png" />
+<p class="caption">上面的4个样本的分别对应的总体损失函数（total loss）随仿真次数的关系曲线。蓝色线表示单次仿真的总体损失函数，橙色线是累积最小总体损失函数，表示从第一次仿真开始到当次仿真之间最小的损失函数值。</p>
+</div>
+<table>
+<caption>二阶分裂输出Miller补偿运算放大器实验结果。试验次数17次，成功11次。</caption>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr><th class="head stub"><p>指标</p></th>
+<th class="head"><p>最小值</p></th>
+<th class="head"><p>平均值</p></th>
+<th class="head"><p>最大值</p></th>
+</tr>
+</thead>
+<tbody>
+<tr><th class="stub"><p>增益</p></th>
+<td><p>1001.6353</p></td>
+<td><p>2269.9933</p></td>
+<td><p>11519.7637</p></td>
+</tr>
+<tr><th class="stub"><p>单位增益带宽</p></th>
+<td><p>10.0081 MHz</p></td>
+<td><p>14.2499 MHz</p></td>
+<td><p>23.2624 MHz</p></td>
+</tr>
+<tr><th class="stub"><p>相位裕度</p></th>
+<td><p>60.8312度</p></td>
+<td><p>76.7032度</p></td>
+<td><p>117.5412度</p></td>
+</tr>
+<tr><th class="stub"><p>切换速率</p></th>
+<td><p>3.0513 V/μs</p></td>
+<td><p>4.9062 V/μs</p></td>
+<td><p>12.1311 V/μs</p></td>
+</tr>
+<tr><th class="stub"><p>静态电流</p></th>
+<td><p>0.1376 mA</p></td>
+<td><p>1.6216 mA</p></td>
+<td><p>3.4920 mA</p></td>
+</tr>
+<tr><th class="stub"><p>花费时间</p></th>
+<td><p>16 s</p></td>
+<td><p>101 s</p></td>
+<td><p>403 s</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id106">
+<h2><a class="toc-backref" href="#id141"><span class="sectnum">6.3</span> 设计二阶电流镜Miller补偿的运算放大器</a></h2>
+<div class="figure">
+<img alt="cmmc.png" src="cmmc.png" />
+<p class="caption">电流镜Miller补偿的二阶运算放大器 <a class="footnote-reference brackets" href="#id108" id="id107">25</a> 的电路原理图</p>
+</div>
+<dl class="footnote brackets">
+<dt class="label" id="id108"><span class="brackets"><a class="fn-backref" href="#id107">25</a></span></dt>
+<dd><p>即current-mirror Miller-compensated two-stage amplifier <a class="citation-reference" href="#tan2013-cmmc" id="id109">[tan2013-cmmc]</a> 。</p>
+</dd>
+</dl>
+<p>设计性能指标目标是</p>
+<ul class="simple">
+<li><p>直流增益不小于1,000倍</p></li>
+<li><p>单位增益带宽不小于30 MHz</p></li>
+<li><p>相位裕度不小于60度</p></li>
+<li><p>切换速率不小于5 V/μs</p></li>
+<li><p>过冲不超过10%</p></li>
+<li><p>增益响应曲线单调递减</p></li>
+</ul>
+<p>在初次尝试自动设计二阶电流镜Miller补偿的运算放大器的时候，发现这个电路结构性能非常好，但是在满足和前两个电路一样的性能指标之后（如切换速率、过冲、相位裕度），却发现瞬态响应有较大的振荡，说明电路的小信号模型是稳定的，但是工作在大信号模式下却不一定稳定。</p>
+<p>排查问题之后，发现稳定的条件不仅需要相位裕度大于60度，还需要增益曲线在降低到单位增益以下之后，不再重新上升到单位增益以上，因此追加了一个“增益响应曲线单调递减”的约束。事实证明这个约束确实能使阶跃响应变得更加稳定、降低阶跃响应的振荡程度，但是仍然不能保证阶跃响应完全没有振荡。</p>
+<p>拟设计的电路参数一共9个，分别是</p>
+<ul class="simple">
+<li><p>第一级差分放大器的输入管M1、M2的宽度</p></li>
+<li><p>第一级差分放大器的负载管M3、M4的宽度</p></li>
+<li><p>第一级差分放大器的电流偏置管M0的宽度</p></li>
+<li><p>中间级补偿用共源放大器的放大管M6的宽度</p></li>
+<li><p>中间级补偿用共源放大器的负载管M5的宽度</p></li>
+<li><p>第二级共源放大器的放大管M8的宽度</p></li>
+<li><p>第二级共源放大器的负载管M7的宽度</p></li>
+<li><p>第一级和第二级之间的补偿电容 <span class="math">\(C_m\)</span></p></li>
+<li><p>电流镜源管M9的宽度</p></li>
+</ul>
+<p>所有晶体管的长度都设置成了0.5 μm。</p>
+<p>其他环境和配置参数</p>
+<ul class="simple">
+<li><p>使用的工艺是UMC 0.13 μm CMOS工艺</p></li>
+<li><p>电源电压是1.2 V</p></li>
+<li><p>输入直流偏置电压是0.6 V</p></li>
+<li><p>输出节点寄生电容10 pF</p></li>
+<li><p>电流镜像源支路上的电流是5 μA</p></li>
+<li><p>所有电路参数取3位有效数字</p></li>
+</ul>
+<p>在这个运算放大器中，因为作者使用了较为先进的0.13 μm工艺，所以性能指标目标比前两个使用0.35 μm工艺的放大器要高一些，同时这些性能参数指标参考了文献 <a class="citation-reference" href="#tan2013-cmmc" id="id110">[tan2013-cmmc]</a> 中手动设计的性能指标。使用0.13 μm工艺的其中一个重要目的是为了能够和文献中的手动设计作比较。</p>
+<p>用来提取频域性能参数的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vp GND dc 0.6 ac 0.5
+V2  Vn GND dc 0.6 ac -0.5
+V0  VDD GND 1.2
+
+M9  /6 /6 VDD VDD P_12_SPL130E l=0.5u w={w9:.3}
+I1  /6 GND 5e-6
+
+M0  /1 /6 VDD VDD P_12_SPL130E l=0.5u w={w0:.3}
+M1  /2 Vp /1 VDD P_12_SPL130E l=0.5u w={w12:.3}
+M2  /3 Vn /1 VDD P_12_SPL130E l=0.5u w={w12:.3}
+M3  /2 /2 GND GND N_12_SPL130E l=0.5u w={w34:.3}
+M4  /3 /2 GND GND N_12_SPL130E l=0.5u w={w34:.3}
+
+M5  /7 /7 VDD VDD P_12_SPL130E l=0.5u w={w5:.3}
+M6  /7 /3 GND GND N_12_SPL130E l=0.5u w={w6:.3}
+
+M7  Vout /7 VDD VDD P_12_SPL130E l=0.5u w={w7:.3}
+M8  Vout /2 GND GND N_12_SPL130E l=0.5u w={w8:.3}
+C1  /2 Vout {cm:.3}
+
+C2  Vout GND 10e-12
+
+.lib ./L130E_SP_12_V141/L130E_SP12_V141.lib tt
+
+.end</code></pre>
+<p>用来提取瞬态响应性能参数的SPICE网表</p>
+<pre class="code literal-block"><code>*Sheet Name:/OPA_SR
+V1  Vin GND dc pwl(0 0.6 0.5e-6 0.6 0.5e-6 0.7)
+V0  VDD GND 1.2
+
+M9  /6 /6 VDD VDD P_12_SPL130E l=0.5u w={w9:.3}
+I1  /6 GND 5e-6
+
+M0  /1 /6 VDD VDD P_12_SPL130E l=0.5u w={w0:.3}
+M1  /2 Vin /1 VDD P_12_SPL130E l=0.5u w={w12:.3}
+M2  /3 Vout /1 VDD P_12_SPL130E l=0.5u w={w12:.3}
+M3  /2 /2 GND GND N_12_SPL130E l=0.5u w={w34:.3}
+M4  /3 /2 GND GND N_12_SPL130E l=0.5u w={w34:.3}
+
+M5  /7 /7 VDD VDD P_12_SPL130E l=0.5u w={w5:.3}
+M6  /7 /3 GND GND N_12_SPL130E l=0.5u w={w6:.3}
+
+M7  Vout /7 VDD VDD P_12_SPL130E l=0.5u w={w7:.3}
+M8  Vout /2 GND GND N_12_SPL130E l=0.5u w={w8:.3}
+C1  /2 Vout {cm:.3}
+
+C2  Vout GND 10e-12
+
+.lib ./L130E_SP_12_V141/L130E_SP12_V141.lib tt
+
+.end</code></pre>
+<div class="figure">
+<img alt="cmmc-results.png" src="cmmc-results.png" />
+<p class="caption">sizer设计出的4个二阶电流镜Miller补偿运算放大器的频率响应曲线（每幅小图的第一张图、第二张图）和瞬态响应曲线（每幅小图的第三张图）。4个电路都是使用scipy的差分进化算法得到的。频率响应曲线与文献中手动设计的结果非常相似，指标也完全满足；同时，如果仅从指标（如切换速率、过冲）上看，阶跃响应曲线和文献效果相当、甚至还略优于手动设计，但是因为存在振荡，作者认为与手动设计还有一些差距。</p>
+</div>
+<div class="figure">
+<img alt="cmmc-results-losses.png" src="cmmc-results-losses.png" />
+<p class="caption">总体损失函数（total loss）随仿真次数的关系曲线。可以观察到因为向量维度这次只有9，所以仿真次数总体上比前两个电路要少很多。</p>
+</div>
+<table>
+<caption>二阶电流镜Miller补偿的运算放大器实验结果。试验次数15次，成功13次。从平均值来看，几乎都优于文献中同种工艺下手动设计的结果。</caption>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr><th class="head stub"><p>指标</p></th>
+<th class="head"><p>最小值</p></th>
+<th class="head"><p>平均值</p></th>
+<th class="head"><p>最大值</p></th>
+<th class="head"><p>文献 <a class="citation-reference" href="#tan2013-cmmc" id="id111">[tan2013-cmmc]</a></p></th>
+</tr>
+</thead>
+<tbody>
+<tr><th class="stub"><p>增益</p></th>
+<td><p>1125.4989</p></td>
+<td><p>1452.0621</p></td>
+<td><p>2199.6799</p></td>
+<td><p>555.2646 (54.89 dB)</p></td>
+</tr>
+<tr><th class="stub"><p>单位增益带宽</p></th>
+<td><p>31.3493 MHz</p></td>
+<td><p>61.0582 MHz</p></td>
+<td><p>90.6658 MHz</p></td>
+<td><p>32.59 MHz</p></td>
+</tr>
+<tr><th class="stub"><p>相位裕度</p></th>
+<td><p>60.7719度</p></td>
+<td><p>82.7581度</p></td>
+<td><p>102.4161度</p></td>
+<td><p>大于70度</p></td>
+</tr>
+<tr><th class="stub"><p>切换速率</p></th>
+<td><p>5.1850 V/μs</p></td>
+<td><p>8.1578 V/μs</p></td>
+<td><p>11.9594 V/μs</p></td>
+<td><p>5.82 V/μs</p></td>
+</tr>
+<tr><th class="stub"><p>静态电流</p></th>
+<td><p>158.96 μA</p></td>
+<td><p>418.02 μA</p></td>
+<td><p>721.45 μA</p></td>
+<td><p>36.57 μA</p></td>
+</tr>
+<tr><th class="stub"><p>花费时间</p></th>
+<td><p>4 s</p></td>
+<td><p>59 s</p></td>
+<td><p>219 s</p></td>
+<td><p>N/A</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id112">
+<h2><a class="toc-backref" href="#id142"><span class="sectnum">6.4</span> 实验结果分析和讨论</a></h2>
+<p>从sizer自动生成的0.35 μm和0.13 μm工艺下运算放大器的频率响应曲线、瞬态响应曲线、以及从这些曲线中测得的性能指标来看，本文初步实现了运算放大器的自动化设计的目标：能在给定电路拓扑结构（用SPICE网表描述）和合理的性能指标约束下，自动算出符合约束的一套电路参数；此外还可以做到指定电路参数有效数字的位数，使之符合制造时的实际情况；同时软件的性能也能保证出结果花费的时间不会太久。自动设计出的运放除了满足约束之外，平均性能指标往往高于约束，并且优于手工设计的结果。</p>
+<p>软件仍然存在一些不足之处，例如在明明存在满足约束条件的一组参数条件下，仍然有概率出现设计失败的情况；例如设计电流镜Miller补偿运放的时候无法完全避免瞬态响应的轻微振荡；在不约束功耗的时候，设计得到的电路的功耗也比手动设计的大很多。</p>
+</div>
+</div>
+<div class="section" id="id113">
+<h1><a class="toc-backref" href="#id143"><span class="sectnum">7</span> 结论</a></h1>
+<p>本文首先回顾了集成电路发展的历史，提出了模拟集成电路一直以来缺失设计自动化的现状、以及这一现状给模拟集成电路发展带来的巨大限制，分析了模拟集成电路难以像数字电路一样做到高度自动化、高度计算机辅助的原因，回顾并总结了前人在模拟电路自动化设计方向上的探索和取得的进展。</p>
+<p>之后，本文给出了模拟集成电路设计问题的一种严谨的数学描述，将设计问题抽象为带约束、带边界的多维目标函数优化问题，并且从算法实现角度出发，介绍了几种现代经典的函数最小化算法；为了适应大多数优化算法，还将带约束、带边界优化问题转化为了等效的无约束、带边界优化问题。</p>
+<p>再之后，本文基于Python程序语言、ngspice仿真器、以及其他Python科学计算工具库，实现了一个能够在给定设计目标约束、给定电路SPICE网表的条件下，自动计算出最优电路参数的软件sizer。为了验证sizer的效果，本文用sizer设计了二阶简单Miller补偿运放、二阶分裂输出Miller补偿运放、二阶电流镜Miller补偿运放，sizer在合理的时间范围内给出了不逊于手工设计的电路参数。实验直接表明了自动化设计的可行性和实用性。</p>
+<p>后续可做的工作有很多，例如优化现有的仿真器、使之能够适应巨大数量的仿真，例如将自动化设计的对象从运算放大器扩展到其他电路模块甚至整个系统。</p>
+</div>
+<div class="section" id="id114">
+<h1><a class="toc-backref" href="#id144"><span class="sectnum">8</span> 致谢</a></h1>
+<p>感谢指导老师谭旻教授一直以来对本次毕业设计项目的大力支持、关心和指导。感谢谭老师课题组的每一位研究生学长学姐对我每一次提问的耐心解答。</p>
+<p>本项目的所有依赖代码都是开源项目，包括但不限于Python、Numpy、Scipy、PySpice、ngspice、pyswarm、docutils，感谢这些项目的开发者。感谢GitHub托管本文 <a class="footnote-reference brackets" href="#id116" id="id115">26</a> 和sizer项目源码。感谢VS Code编辑器的开发者，让我得以以轻松愉悦的心情完成项目和论文。</p>
+<dl class="footnote brackets">
+<dt class="label" id="id116"><span class="brackets"><a class="fn-backref" href="#id115">26</a></span></dt>
+<dd><p>本文文本源码在 <a class="reference external" href="https://github.com/aiifabbf/undergraduate-thesis">https://github.com/aiifabbf/undergraduate-thesis</a></p>
+</dd>
+</dl>
+</div>
+<div class="section" id="id117">
+<h1><a class="toc-backref" href="#id145"><span class="sectnum">9</span> 参考文献</a></h1>
+<dl class="citation">
+<dt class="label" id="rocha2014"><span class="brackets">rocha2014</span><span class="fn-backref">(<a href="#id5">1</a>,<a href="#id11">2</a>,<a href="#id18">3</a>)</span></dt>
+<dd><p>Frederico A.E. Rocha et al., &quot;Electronic Design Automation of Analog ICs Combining Gradient Models with Multi-Objective Evolutionary Algorithms,&quot; Springer, 2014.</p>
+</dd>
+<dt class="label" id="meurer2017"><span class="brackets"><a class="fn-backref" href="#id8">meurer2017</a></span></dt>
+<dd><p>Meurer et al., &quot;SymPy: symbolic computing in Python,&quot; PeerJ Computer Science, 2017.</p>
+</dd>
+<dt class="label" id="nye1988"><span class="brackets">nye1988</span><span class="fn-backref">(<a href="#id12">1</a>,<a href="#id28">2</a>)</span></dt>
+<dd><p>W. Nye, D.C. Riley, A. Sangiovanni-Vincentelli et al., &quot;DELIGHT.SPICE: an optimization-based system for the design of integrated circuits,&quot; IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 7(4), 501–519 (1988).</p>
+</dd>
+<dt class="label" id="degrauwe1987"><span class="brackets">degrauwe1987</span><span class="fn-backref">(<a href="#id13">1</a>,<a href="#id20">2</a>)</span></dt>
+<dd><p>M.G.R. Degrauwe, O. Nys, E. Dijkstra et al., &quot;IDAC: an interactive design tool for analog CMOS circuits,&quot; IEEE J. Solid-State Circuits 22(6), 1106–1116 (1987)</p>
+</dd>
+<dt class="label" id="turky1989"><span class="brackets">turky1989</span><span class="fn-backref">(<a href="#id14">1</a>,<a href="#id21">2</a>)</span></dt>
+<dd><p>F. El-Turky, E.E. Perry, &quot;BLADES: an artificial intelligence approach to analog circuit design,&quot; IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 8(6), 680–692 (1989)</p>
+</dd>
+<dt class="label" id="sheu1990"><span class="brackets"><a class="fn-backref" href="#id22">sheu1990</a></span></dt>
+<dd><p>B.J. Sheu, J.C. Lee, A.H. Fung, &quot;Flexible architecture approach to knowledge-based analogue IC design,&quot; IEEE Proc. G Circuits Devices Syst. 137(4), 266–274 (1990)</p>
+</dd>
+<dt class="label" id="gielen1989"><span class="brackets">gielen1989</span><span class="fn-backref">(<a href="#id15">1</a>,<a href="#id26">2</a>)</span></dt>
+<dd><p>G.G.E. Gielen, H.C.C. Walscharts, W.M.C. Sansen, &quot;ISAAC: a symbolic simulator for analog integrated circuits,&quot; IEEE J. Solid-State Circuits 24(6), 1587–1597 (1989)</p>
+</dd>
+<dt class="label" id="ochotta1996"><span class="brackets">ochotta1996</span><span class="fn-backref">(<a href="#id16">1</a>,<a href="#id27">2</a>)</span></dt>
+<dd><p>E.S. Ochotta, R.A. Rutenbar, L.R. Carley, &quot;Synthesis of high-performance analog circuits in ASTRX/OBLX,&quot; IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 15(3), 273–294 (1996).</p>
+</dd>
+<dt class="label" id="phelps2000"><span class="brackets">phelps2000</span><span class="fn-backref">(<a href="#id17">1</a>,<a href="#id29">2</a>,<a href="#id54">3</a>)</span></dt>
+<dd><p>R. Phelps, M. Krasnicki, R.A. Rutenbar et al., &quot;Anaconda: simulation-based synthesis of analog circuits via stochastic pattern search,&quot; IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 19(6), 703–717 (2000).</p>
+</dd>
+<dt class="label" id="wang2018"><span class="brackets"><a class="fn-backref" href="#id30">wang2018</a></span></dt>
+<dd><p>Hanrui Wang et al., &quot;Learning to design circuits, &quot; arXiv, 2018.</p>
+</dd>
+<dt class="label" id="nagel1973"><span class="brackets">nagel1973</span><span class="fn-backref">(<a href="#id24">1</a>,<a href="#id31">2</a>)</span></dt>
+<dd><p>Nagel, L. W, and Pederson, D. O., &quot;SPICE (Simulation Program with Integrated Circuit Emphasis),&quot; Memorandum No. ERL-M382, University of California, Berkeley, Apr. 1973.</p>
+</dd>
+<dt class="label" id="koh1990"><span class="brackets"><a class="fn-backref" href="#id25">koh1990</a></span></dt>
+<dd><p>H.Y. Koh, C.H. Sequin, P.R. Gray, &quot;OPASYN: a compiler for CMOS operational amplifiers,&quot; IEEE Trans. Comput. Aided Des. Integr. Circuits Syst. 9(2), 113–125 (1990).</p>
+</dd>
+<dt class="label" id="wolfe2004"><span class="brackets"><a class="fn-backref" href="#id32">wolfe2004</a></span></dt>
+<dd><p>G.A. Wolfe, &quot;Performance Macro-Modeling Techiniques for Fast Analog Circuit Synthesis,&quot; University of Cincinnati, 2004.</p>
+</dd>
+<dt class="label" id="barros2006"><span class="brackets"><a class="fn-backref" href="#id33">barros2006</a></span></dt>
+<dd><p>M. Barros, J. Guilherme, N. Horta, &quot;GA-SVM optimization kernel applied to analog IC design automation,&quot; in IEEE Internation Conference on Electronics, (2006), pp.486–489</p>
+</dd>
+<dt class="label" id="yu2018"><span class="brackets"><a class="fn-backref" href="#id34">yu2018</a></span></dt>
+<dd><p>Hao Yu, Guoyong Shi, &quot;Symbolic circuit reduction for multistage amplifier macromodeling,&quot; IEEE Asia Pacific Conference on Circuits and Systems, 2018.</p>
+</dd>
+<dt class="label" id="liu2009"><span class="brackets">liu2009</span><span class="fn-backref">(<a href="#id45">1</a>,<a href="#id53">2</a>)</span></dt>
+<dd><p>Bo Liu, et al., &quot;Analog circuit optimization system based on hybrid evolutionary algorithms,&quot; INTEGRATION, the VLSI journal, 2009.</p>
+</dd>
+<dt class="label" id="powell1994"><span class="brackets"><a class="fn-backref" href="#id51">powell1994</a></span></dt>
+<dd><p>M.J.D. Powell, &quot;A direct search optimization method that models the objective and constraint functions by linear interpolation,&quot; Advances in Optimization and Numerical Analysis, eds. S. Gomez and J-P Hennart, Kluwer Academic (Dordrecht), 51-67, 1994.</p>
+</dd>
+<dt class="label" id="kraft1988"><span class="brackets"><a class="fn-backref" href="#id52">kraft1988</a></span></dt>
+<dd><p>D. Kraft, &quot;A software package for sequential quadratic programming,&quot; Tech. Rep. DFVLR-FB 88-28, DLR German Aerospace Center – Institute for Flight Mechanics, Koln, Germany, 1988.</p>
+</dd>
+<dt class="label" id="nocedal2006"><span class="brackets"><a class="fn-backref" href="#id62">nocedal2006</a></span></dt>
+<dd><p>Nocedal, J. and S.J. Wright, &quot;Numerical Optimization,&quot; Springer New York, 2006.</p>
+</dd>
+<dt class="label" id="tan2013-somc"><span class="brackets"><a class="fn-backref" href="#id105">tan2013-somc</a></span></dt>
+<dd><p>Min Tan and Wing-Hung Ki, &quot;Split-output miller-compensated two-stage amplifiers,&quot; 2013 IEEE International Conference of Electron Devices and Solid-state Circuits, Hong Kong, 2013, pp. 1-2.</p>
+</dd>
+<dt class="label" id="tan2013-cmmc"><span class="brackets">tan2013-cmmc</span><span class="fn-backref">(<a href="#id109">1</a>,<a href="#id110">2</a>,<a href="#id111">3</a>)</span></dt>
+<dd><p>M. Tan and W. Ki, &quot;Current-mirror miller compensation: An improved frequency compensation technique for two-stage amplifiers,&quot; 2013 International Symposium on VLSI Design, Automation, and Test (VLSI-DAT), Hsinchu, 2013, pp. 1-4.</p>
+</dd>
+<dt class="label" id="storn1997"><span class="brackets"><a class="fn-backref" href="#id68">storn1997</a></span></dt>
+<dd><p>R. Storn, K. Price, &quot;Differential evolution - a simple and efficient heuristic for global optimization over continuous spaces,&quot; Journal of Global Optimization. 11 (4): 341–359, 1997.</p>
+</dd>
+<dt class="label" id="kennedy1995"><span class="brackets"><a class="fn-backref" href="#id74">kennedy1995</a></span></dt>
+<dd><p>J. Kennedy, R. Eberhart, &quot;Particle Swarm Optimization,&quot; Proceedings of IEEE International Conference on Neural Networks. IV. pp. 1942–1948, 1995.</p>
+</dd>
+</dl>
+</div>
+    </div>
+</body>
+</html>
+</body>
+
+</html>
